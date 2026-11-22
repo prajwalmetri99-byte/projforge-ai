@@ -162,6 +162,11 @@ def build_docx_bytes(proj, cfg):
     line_sp = "360" if cfg.get("spacing") == "1.5" else "276"
     order = cfg.get("order", ["intro", "components", "working", "code", "conclusion"])
 
+    student = cfg.get("student", "").strip() or "Student Name"
+    usn = cfg.get("usn", "").strip() or "USN"
+    college = cfg.get("college", "").strip() or "ENGINEERING COLLEGE"
+    guide = cfg.get("guide", "").strip() or "Project Guide"
+
     def p_xml(text, sz, bold=False, center=False, is_code=False):
         f_name = "Consolas" if is_code else font
         b_tag = "<w:b/>" if bold else ""
@@ -176,10 +181,10 @@ def build_docx_bytes(proj, cfg):
         return f'<w:p><w:pPr>{jc_tag}<w:spacing w:after="140" w:line="{line_sp}" w:lineRule="auto"/></w:pPr>{"".join(runs)}</w:p>'
 
     body = [
-        p_xml(cfg.get("college", "ENGINEERING COLLEGE").upper(), h_size + 4, bold=True, center=True),
+        p_xml(college.upper(), h_size + 4, bold=True, center=True),
         p_xml(f"Project Report — {proj['branch']}", b_size, bold=True, center=True),
         p_xml(proj["title"].upper(), h_size + 2, bold=True, center=True),
-        p_xml(f"By: {cfg.get('student', 'Student')} (USN: {cfg.get('usn', '1AM23XX000')}) | Guide: {cfg.get('guide', 'Prof. Faculty')}", b_size, bold=True, center=True),
+        p_xml(f"By: {student} (USN: {usn}) | Guide: {guide}", b_size, bold=True, center=True),
     ]
 
     for idx, sec in enumerate(order, start=1):
@@ -198,7 +203,7 @@ def build_docx_bytes(proj, cfg):
             body.extend([p_xml(f"{idx}. CONCLUSION", h_size, bold=h_bold), p_xml(proj["conclusion"], b_size)])
 
     doc_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + "".join(body) + "</w:body></w:document>"
-    ct_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'
+    ct_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-package.document.main+xml"/></Types>'
     rels_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'
 
     buf = io.BytesIO()
@@ -265,6 +270,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
   .tab.active { background: #38bdf8; color: #0f172a; border-color: #38bdf8; }
   label { display: block; font-size: 12px; color: #94a3b8; margin: 8px 0 4px; font-weight: 600; }
   input, select, textarea { width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 13px; outline: none; }
+  input::placeholder { color: #64748b; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .btn-ai { width: 100%; margin-top: 12px; padding: 11px; border: none; border-radius: 9px; background: linear-gradient(90deg, #0284c7, #2563eb); color: #fff; font-weight: 800; font-size: 14px; cursor: pointer; }
   .btn-pay { width: 100%; margin-top: 14px; padding: 13px; border: none; border-radius: 10px; background: linear-gradient(90deg, #10b981, #059669); color: #fff; font-size: 14.5px; font-weight: 800; cursor: pointer; }
@@ -368,14 +374,14 @@ HTML_PAGE = r"""<!DOCTYPE html>
     </div>
 
     <div class="card">
-      <h2>2. Madam's Exact Word (.docx) Rules</h2>
+      <h2>2. Exact Word (.docx) Rules</h2>
       <div class="grid2">
-        <div><label>Student Name</label><input id="stName" value="Prajwal Metri" /></div>
-        <div><label>USN</label><input id="stUsn" value="1AM23CS045" /></div>
+        <div><label>Student Name</label><input id="stName" placeholder="Enter your full name" /></div>
+        <div><label>USN / Roll No</label><input id="stUsn" placeholder="e.g. 1XX23CS001" /></div>
       </div>
       <div class="grid2">
-        <div><label>College Name</label><input id="clgName" value="AMC Engineering College" /></div>
-        <div><label>Guide / Madam Name</label><input id="guideName" value="Prof. Anitha K" /></div>
+        <div><label>College Name</label><input id="clgName" placeholder="Enter college name" /></div>
+        <div><label>Guide / Faculty Name</label><input id="guideName" placeholder="Enter guide name" /></div>
       </div>
       <div class="grid2">
         <div>
@@ -525,7 +531,8 @@ async function executeDownloadAndWipe() {
   };
   const res = await fetch("/api/unlock_and_wipe", { method: "POST", body: JSON.stringify(cfg) });
   const blob = await res.blob();
-  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${cfg.usn}_Report.docx`; a.click();
+  const fileLabel = (cfg.usn || "Project").trim();
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${fileLabel}_Report.docx`; a.click();
   document.getElementById("codeSection").style.display = "block";
   document.getElementById("wipeAlert").style.display = "block";
 }
