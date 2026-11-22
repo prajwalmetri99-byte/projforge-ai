@@ -1,9 +1,13 @@
+import base64
+import hashlib
+import hmac
 import io
 import json
 import os
 import socket
 import threading
 import time
+import urllib.request
 import webbrowser
 import zipfile
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -12,8 +16,14 @@ from xml.sax.saxutils import escape
 
 DB_FILE = "users_db.json"
 LAUNCH_FILE = "launch_config.json"
+PAY_LOG_FILE = "payments_log.json"
+PRICE_INR = 49
 FREE_DAYS = 2
 LOCK = threading.Lock()
+
+# Render Environment Variables ನಲ್ಲಿ RAZORPAY_KEY_ID ಮತ್ತು RAZORPAY_KEY_SECRET ಹಾಕಬೇಕು
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
 
 
 def get_launch_end_ts():
@@ -38,19 +48,46 @@ def is_free_period():
     return time.time() < LAUNCH_END_TS
 
 
-def load_users():
-    if os.path.exists(DB_FILE):
+def load_json(path, default):
+    if os.path.exists(path):
         try:
-            with open(DB_FILE, "r", encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
-            return {}
-    return {}
+            return default
+    return default
 
 
-def save_users(data):
-    with open(DB_FILE, "w", encoding="utf-8") as f:
+def save_json(path, data):
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
+
+
+def create_razorpay_order(amount_inr):
+    url = "https://api.razorpay.com/v1/orders"
+    payload = json.dumps({
+        "amount": int(amount_inr) * 100,
+        "currency": "INR",
+        "receipt": f"pf_{int(time.time())}"
+    }).encode("utf-8")
+    auth = base64.b64encode(f"{RAZORPAY_KEY_ID}:{RAZORPAY_KEY_SECRET}".encode("utf-8")).decode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Basic {auth}"
+        },
+        method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def verify_razorpay_signature(order_id, payment_id, signature):
+    msg = f"{order_id}|{payment_id}".encode("utf-8")
+    expected = hmac.new(RAZORPAY_KEY_SECRET.encode("utf-8"), msg, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
 
 
 def generate_project_bundle(mode, title, branch, budget, extra_notes):
@@ -203,7 +240,7 @@ def build_docx_bytes(proj, cfg):
             body.extend([p_xml(f"{idx}. CONCLUSION", h_size, bold=h_bold), p_xml(proj["conclusion"], b_size)])
 
     doc_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + "".join(body) + "</w:body></w:document>"
-    ct_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-package.document.main+xml"/></Types>'
+    ct_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'
     rels_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'
 
     buf = io.BytesIO()
@@ -241,7 +278,7 @@ SITEMAP_XML = """<?xml version="1.0" encoding="UTF-8"?>
   </url>
 </urlset>"""
 
-HTML_PAGE = r"""<!DOCTYPE html>
+HTML_PAGE = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -253,44 +290,45 @@ HTML_PAGE = r"""<!DOCTYPE html>
 <meta name="theme-color" content="#0284c7" />
 <link rel="manifest" href="/manifest.json" />
 <title>ProjForge AI — Engineering Project & Exact MS Word (.docx) Report Generator</title>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-  body { background: #0b1120; color: #f8fafc; min-height: 100vh; }
-  .banner { background: linear-gradient(90deg, #10b981, #059669); color: #fff; text-align: center; padding: 9px; font-weight: 800; font-size: 13px; }
-  .banner.paid { background: linear-gradient(90deg, #f59e0b, #ef4444); color: #111; }
-  .nav { background: #1e293b; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; flex-wrap: wrap; gap: 8px; }
-  .nav h1 { font-size: 18px; color: #38bdf8; }
-  .pill { background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-  .install-btn { background: #f59e0b; color: #111; border: none; padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 12px; cursor: pointer; display: none; }
-  .wrap { max-width: 1180px; margin: 16px auto; padding: 0 12px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }
-  .card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px; }
-  .card h2 { font-size: 15px; color: #38bdf8; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
-  .tab { flex: 1; padding: 8px 4px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #cbd5e1; font-size: 11.5px; font-weight: 700; cursor: pointer; }
-  .tab.active { background: #38bdf8; color: #0f172a; border-color: #38bdf8; }
-  label { display: block; font-size: 12px; color: #94a3b8; margin: 8px 0 4px; font-weight: 600; }
-  input, select, textarea { width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 13px; outline: none; }
-  input::placeholder { color: #64748b; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .btn-ai { width: 100%; margin-top: 12px; padding: 11px; border: none; border-radius: 9px; background: linear-gradient(90deg, #0284c7, #2563eb); color: #fff; font-weight: 800; font-size: 14px; cursor: pointer; }
-  .btn-pay { width: 100%; margin-top: 14px; padding: 13px; border: none; border-radius: 10px; background: linear-gradient(90deg, #10b981, #059669); color: #fff; font-size: 14.5px; font-weight: 800; cursor: pointer; }
-  .sim-box { background: #020617; border: 2px solid #0ea5e9; border-radius: 10px; padding: 8px; margin-top: 10px; text-align: center; }
-  .lang-row { display: flex; gap: 6px; margin: 8px 0; }
-  .lbtn { padding: 5px 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #cbd5e1; cursor: pointer; font-size: 12px; font-weight: 700; }
-  .lbtn.active { background: #10b981; color: #052e16; border-color: #10b981; }
-  .viva-box { background: #0f172a; padding: 10px; border-radius: 8px; font-size: 13px; line-height: 1.5; border-left: 4px solid #10b981; }
-  .bom { margin: 8px 0 0 18px; font-size: 12.5px; color: #e2e8f0; line-height: 1.55; }
-  .code-box { background: #020617; color: #a7f3d0; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 12px; white-space: pre-wrap; margin-top: 8px; max-height: 160px; overflow-y: auto; border: 1px solid #334155; }
-  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.88); display: flex; justify-content: center; align-items: center; z-index: 99; padding: 12px; }
-  .mcard { background: #1e293b; border: 2px solid #38bdf8; border-radius: 16px; padding: 22px; width: 370px; max-width: 100%; text-align: center; }
-  .wipe-alert { background: #064e3b; border: 1px solid #10b981; color: #a7f3d0; padding: 8px 10px; border-radius: 8px; font-size: 12px; margin-top: 10px; display: none; }
-  @keyframes flow { 0% { stroke-dashoffset: 24; } 100% { stroke-dashoffset: 0; } }
-  .wire { stroke-dasharray: 6 6; animation: flow 0.8s linear infinite; }
-  @media (max-width: 820px) { .wrap { grid-template-columns: 1fr; } }
+  * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }}
+  body {{ background: #0b1120; color: #f8fafc; min-height: 100vh; }}
+  .banner {{ background: linear-gradient(90deg, #10b981, #059669); color: #fff; text-align: center; padding: 9px; font-weight: 800; font-size: 13px; }}
+  .banner.paid {{ background: linear-gradient(90deg, #f59e0b, #ef4444); color: #111; }}
+  .nav {{ background: #1e293b; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; flex-wrap: wrap; gap: 8px; }}
+  .nav h1 {{ font-size: 18px; color: #38bdf8; }}
+  .pill {{ background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }}
+  .install-btn {{ background: #f59e0b; color: #111; border: none; padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 12px; cursor: pointer; display: none; }}
+  .wrap {{ max-width: 1180px; margin: 16px auto; padding: 0 12px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }}
+  .card {{ background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px; }}
+  .card h2 {{ font-size: 15px; color: #38bdf8; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }}
+  .tabs {{ display: flex; gap: 6px; margin-bottom: 10px; }}
+  .tab {{ flex: 1; padding: 8px 4px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #cbd5e1; font-size: 11.5px; font-weight: 700; cursor: pointer; }}
+  .tab.active {{ background: #38bdf8; color: #0f172a; border-color: #38bdf8; }}
+  label {{ display: block; font-size: 12px; color: #94a3b8; margin: 8px 0 4px; font-weight: 600; }}
+  input, select, textarea {{ width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 13px; outline: none; }}
+  input::placeholder {{ color: #64748b; }}
+  .grid2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }}
+  .btn-ai {{ width: 100%; margin-top: 12px; padding: 11px; border: none; border-radius: 9px; background: linear-gradient(90deg, #0284c7, #2563eb); color: #fff; font-weight: 800; font-size: 14px; cursor: pointer; }}
+  .btn-pay {{ width: 100%; margin-top: 14px; padding: 13px; border: none; border-radius: 10px; background: linear-gradient(90deg, #10b981, #059669); color: #fff; font-size: 14.5px; font-weight: 800; cursor: pointer; }}
+  .sim-box {{ background: #020617; border: 2px solid #0ea5e9; border-radius: 10px; padding: 8px; margin-top: 10px; text-align: center; }}
+  .lang-row {{ display: flex; gap: 6px; margin: 8px 0; }}
+  .lbtn {{ padding: 5px 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #cbd5e1; cursor: pointer; font-size: 12px; font-weight: 700; }}
+  .lbtn.active {{ background: #10b981; color: #052e16; border-color: #10b981; }}
+  .viva-box {{ background: #0f172a; padding: 10px; border-radius: 8px; font-size: 13px; line-height: 1.5; border-left: 4px solid #10b981; }}
+  .bom {{ margin: 8px 0 0 18px; font-size: 12.5px; color: #e2e8f0; line-height: 1.55; }}
+  .code-box {{ background: #020617; color: #a7f3d0; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 12px; white-space: pre-wrap; margin-top: 8px; max-height: 160px; overflow-y: auto; border: 1px solid #334155; }}
+  .modal {{ position: fixed; inset: 0; background: rgba(0,0,0,0.88); display: flex; justify-content: center; align-items: center; z-index: 99; padding: 12px; }}
+  .mcard {{ background: #1e293b; border: 2px solid #38bdf8; border-radius: 16px; padding: 20px; width: 380px; max-width: 100%; text-align: center; }}
+  .wipe-alert {{ background: #064e3b; border: 1px solid #10b981; color: #a7f3d0; padding: 8px 10px; border-radius: 8px; font-size: 12px; margin-top: 10px; display: none; }}
+  @keyframes flow {{ 0% {{ stroke-dashoffset: 24; }} 100% {{ stroke-dashoffset: 0; }} }}
+  .wire {{ stroke-dasharray: 6 6; animation: flow 0.8s linear infinite; }}
+  @media (max-width: 820px) {{ .wrap {{ grid-template-columns: 1fr; }} }}
 </style>
 </head>
 <body>
-  <div class="banner" id="topBanner">🎉 LAUNCH OFFER: 100% FREE for First 2 Days! (₹49 after 2 days) 🎉</div>
+  <div class="banner" id="topBanner">🎉 LAUNCH OFFER: 100% FREE for First 2 Days! (₹{PRICE_INR} after 2 days) 🎉</div>
   <div class="nav">
     <h1>⚡ ProjForge AI</h1>
     <div style="display:flex;gap:6px;align-items:center;">
@@ -307,20 +345,6 @@ HTML_PAGE = r"""<!DOCTYPE html>
       <p style="font-size:13px;color:#94a3b8;margin-bottom:14px;">Login with Email or Mobile Number to access ProjForge AI.</p>
       <input id="loginContact" placeholder="Email or 10-digit Mobile Number" onkeydown="if(event.key==='Enter') doLogin()" />
       <button class="btn-pay" style="margin-top:12px;" onclick="doLogin()">Open Studio</button>
-    </div>
-  </div>
-
-  <!-- Payment Modal -->
-  <div class="modal" id="payModal" style="display:none;" onclick="if(event.target===this) this.style.display='none'">
-    <div class="mcard" style="border-color:#f59e0b;">
-      <div style="color:#f59e0b;font-weight:800;font-size:12px;">2-DAY FREE LAUNCH ENDED — STANDARD PLAN</div>
-      <h2 style="margin:6px 0;font-size:26px;">Pay ₹49</h2>
-      <p style="font-size:12.5px;color:#cbd5e1;margin-bottom:12px;">Downloads MS Word (.docx) + Dump Code & auto-wipes your project details for 100% privacy.</p>
-      <div style="background:#fff;padding:8px;border-radius:10px;display:inline-block;margin-bottom:10px;">
-        <img id="upiQr" src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=projforge@upi&pn=ProjForge&am=49&cu=INR" width="140" height="140" />
-      </div>
-      <button class="btn-pay" style="margin-top:4px;" onclick="executeDownloadAndWipe()">Confirm & Download .docx</button>
-      <button style="margin-top:8px;background:transparent;border:none;color:#94a3b8;cursor:pointer;" onclick="document.getElementById('payModal').style.display='none'">Cancel</button>
     </div>
   </div>
 
@@ -436,53 +460,53 @@ HTML_PAGE = r"""<!DOCTYPE html>
 <script>
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
 let deferredPrompt = null;
-window.addEventListener("beforeinstallprompt", (e) => {
+window.addEventListener("beforeinstallprompt", (e) => {{
   e.preventDefault();
   deferredPrompt = e;
   document.getElementById("installBtn").style.display = "inline-block";
-});
-function installPWA() {
-  if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; }
+}});
+function installPWA() {{
+  if (deferredPrompt) {{ deferredPrompt.prompt(); deferredPrompt = null; }}
   else alert("Browser menu (⋮) -> 'Add to Home Screen' / 'Install App' click maadi!");
-}
+}}
 
 let currentUser = "", isFreeNow = true, hoursLeft = 48, curMode = "trending", curLang = "kn", compiledProj = null;
 
-function setMode(m) {
+function setMode(m) {{
   curMode = m;
   ["trend", "name", "custom"].forEach(k => document.getElementById("t_" + k).classList.toggle("active", m.startsWith(k)));
   document.getElementById("trendingBox").style.display = m === "trending" ? "block" : "none";
   document.getElementById("customNotesBox").style.display = m === "custom" ? "block" : "none";
   if (m === "trending") applyTrending();
-}
-function applyTrending() {
+}}
+function applyTrending() {{
   const [t, b] = document.getElementById("trendSelect").value.split("|");
   document.getElementById("projTitle").value = t;
   document.getElementById("projBranch").value = b;
   compileProject();
-}
-function setLang(l) {
+}}
+function setLang(l) {{
   curLang = l;
   ["kn", "en", "hi"].forEach(x => document.getElementById("l_" + x).classList.toggle("active", x === l));
   if (compiledProj) document.getElementById("vivaText").textContent = compiledProj.viva[curLang];
-}
-function updatePriceUI() {
+}}
+function updatePriceUI() {{
   const banner = document.getElementById("topBanner");
   const btn = document.getElementById("mainPayBtn");
-  if (isFreeNow) {
+  if (isFreeNow) {{
     banner.classList.remove("paid");
-    banner.textContent = `🎉 LAUNCH OFFER: 100% FREE for ${hoursLeft} hrs left! (₹49 after 2 days) 🎉`;
+    banner.textContent = `🎉 LAUNCH OFFER: 100% FREE for ${{hoursLeft}} hrs left! (₹{PRICE_INR} after 2 days) 🎉`;
     btn.textContent = "Download Word (.docx) + Dump Code — FREE (Launch Offer)";
-  } else {
+  }} else {{
     banner.classList.add("paid");
-    banner.textContent = "⚡ 2-DAY FREE LAUNCH ENDED — Exact Word (.docx) + Dump Code at ₹49 ⚡";
-    btn.textContent = "Unlock & Download Word (.docx) + Code — ₹49";
-  }
-}
-async function doLogin() {
+    banner.textContent = "⚡ 2-DAY FREE LAUNCH ENDED — Exact Word (.docx) + Dump Code at ₹{PRICE_INR} ⚡";
+    btn.textContent = "Pay ₹{PRICE_INR} (PhonePe / GPay / UPI) & Auto-Download";
+  }}
+}}
+async function doLogin() {{
   const contact = document.getElementById("loginContact").value.trim();
-  if (contact.length < 5) { alert("Valid Email or Mobile Number haaki!"); return; }
-  const res = await fetch("/api/login", { method: "POST", body: JSON.stringify({ contact }) });
+  if (contact.length < 5) {{ alert("Valid Email or Mobile Number haaki!"); return; }}
+  const res = await fetch("/api/login", {{ method: "POST", body: JSON.stringify({{ contact }}) }});
   const data = await res.json();
   currentUser = contact;
   isFreeNow = data.is_free;
@@ -491,51 +515,74 @@ async function doLogin() {
   document.getElementById("loginModal").style.display = "none";
   updatePriceUI();
   compileProject();
-}
-function logout() { currentUser = ""; document.getElementById("loginModal").style.display = "flex"; }
-async function compileProject() {
-  const res = await fetch("/api/compile", {
+}}
+function logout() {{ currentUser = ""; document.getElementById("loginModal").style.display = "flex"; }}
+async function compileProject() {{
+  const res = await fetch("/api/compile", {{
     method: "POST",
-    body: JSON.stringify({
+    body: JSON.stringify({{
       mode: curMode,
       title: document.getElementById("projTitle").value,
       branch: document.getElementById("projBranch").value,
       budget: document.getElementById("projBudget").value,
       extra_notes: document.getElementById("extraNotes").value
-    })
-  });
+    }})
+  }});
   compiledProj = await res.json();
   document.getElementById("vivaText").textContent = compiledProj.viva[curLang];
-  document.getElementById("bomList").innerHTML = compiledProj.components.map(c => `<li><b>${c.name}</b> — ₹${c.cost}</li>`).join("") + `<li><b style="color:#10b981;">Total Cost: ₹${compiledProj.total_cost}</b></li>`;
+  document.getElementById("bomList").innerHTML = compiledProj.components.map(c => `<li><b>${{c.name}}</b> — ₹${{c.cost}}</li>`).join("") + `<li><b style="color:#10b981;">Total Cost: ₹${{compiledProj.total_cost}}</b></li>`;
   document.getElementById("codeOut").textContent = compiledProj.code;
   const svg = document.getElementById("simSvg");
   svg.innerHTML = `<rect x="20" y="35" width="115" height="75" rx="8" fill="#0369a1" stroke="#38bdf8" stroke-width="2"/><text x="77" y="77" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">CONTROLLER</text><rect x="190" y="35" width="100" height="75" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/><text x="240" y="77" fill="#fbbf24" font-size="12" font-weight="bold" text-anchor="middle">INPUT/SENSOR</text><rect x="345" y="35" width="95" height="75" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="2"/><text x="392" y="77" fill="#6ee7b7" font-size="12" font-weight="bold" text-anchor="middle">OUTPUT</text><line x1="135" y1="72" x2="190" y2="72" stroke="#fbbf24" stroke-width="3" class="wire"/><line x1="290" y1="72" x2="345" y2="72" stroke="#10b981" stroke-width="3" class="wire"/>`;
-}
-function handleDownloadClick() {
-  if (!currentUser) { document.getElementById("loginModal").style.display = "flex"; return; }
-  if (isFreeNow) {
-    executeDownloadAndWipe();
-  } else {
-    document.getElementById("payModal").style.display = "flex";
-  }
-}
-async function executeDownloadAndWipe() {
-  document.getElementById("payModal").style.display = "none";
-  const cfg = {
-    contact: currentUser, project: compiledProj,
+}}
+async function handleDownloadClick() {{
+  if (!currentUser) {{ document.getElementById("loginModal").style.display = "flex"; return; }}
+  if (isFreeNow) {{
+    executeDownloadAndWipe(null);
+    return;
+  }}
+  const orderRes = await fetch("/api/create_order", {{ method: "POST" }});
+  const orderData = await orderRes.json();
+  if (!orderRes.ok) {{
+    alert(orderData.error || "Payment gateway setup pending!");
+    return;
+  }}
+  const options = {{
+    key: orderData.key_id,
+    amount: orderData.amount,
+    currency: "INR",
+    name: "ProjForge AI",
+    description: "Exact MS Word (.docx) Report + Ready Code",
+    order_id: orderData.order_id,
+    theme: {{ color: "#0284c7" }},
+    handler: function (response) {{
+      executeDownloadAndWipe(response);
+    }}
+  }};
+  const rzp = new Razorpay(options);
+  rzp.open();
+}}
+async function executeDownloadAndWipe(rzpResp) {{
+  const cfg = {{
+    contact: currentUser, rzp: rzpResp, project: compiledProj,
     student: document.getElementById("stName").value, usn: document.getElementById("stUsn").value,
     college: document.getElementById("clgName").value, guide: document.getElementById("guideName").value,
     font: document.getElementById("fontName").value, h_bold: document.getElementById("hBold").value === "true",
     h_size: document.getElementById("hSize").value, b_size: document.getElementById("bSize").value,
     spacing: document.getElementById("lineSpacing").value, order: document.getElementById("secOrder").value.split(",")
-  };
-  const res = await fetch("/api/unlock_and_wipe", { method: "POST", body: JSON.stringify(cfg) });
+  }};
+  const res = await fetch("/api/unlock_and_wipe", {{ method: "POST", body: JSON.stringify(cfg) }});
+  if (!res.ok) {{
+    const err = await res.json();
+    alert(err.error || "Payment verification failed!");
+    return;
+  }}
   const blob = await res.blob();
   const fileLabel = (cfg.usn || "Project").trim();
-  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${fileLabel}_Report.docx`; a.click();
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${{fileLabel}}_Report.docx`; a.click();
   document.getElementById("codeSection").style.display = "block";
   document.getElementById("wipeAlert").style.display = "block";
-}
+}}
 </script>
 </body>
 </html>"""
@@ -549,9 +596,9 @@ class StudioHandler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
-    def send_json(self, obj):
+    def send_json(self, obj, code=200):
         raw = json.dumps(obj).encode("utf-8")
-        self.send_response(200)
+        self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
@@ -600,10 +647,10 @@ class StudioHandler(BaseHTTPRequestHandler):
         if self.path == "/api/login":
             contact = body.get("contact", "").strip().lower()
             with LOCK:
-                users = load_users()
+                users = load_json(DB_FILE, {})
                 if contact not in users:
                     users[contact] = {"joined_at": time.time()}
-                    save_users(users)
+                    save_json(DB_FILE, users)
                 rem_sec = max(0, int(LAUNCH_END_TS - time.time()))
                 self.send_json({
                     "is_free": is_free_period(),
@@ -611,7 +658,32 @@ class StudioHandler(BaseHTTPRequestHandler):
                 })
         elif self.path == "/api/compile":
             self.send_json(generate_project_bundle(body.get("mode"), body.get("title", ""), body.get("branch", "Engineering"), body.get("budget", 600), body.get("extra_notes", "")))
+        elif self.path == "/api/create_order":
+            if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+                self.send_json({"error": "Razorpay API Keys not configured yet!"}, 500)
+                return
+            try:
+                order = create_razorpay_order(PRICE_INR)
+                self.send_json({
+                    "key_id": RAZORPAY_KEY_ID,
+                    "order_id": order["id"],
+                    "amount": order["amount"]
+                })
+            except Exception as e:
+                self.send_json({"error": f"Order error: {e}"}, 500)
         elif self.path == "/api/unlock_and_wipe":
+            if not is_free_period():
+                rzp = body.get("rzp") or {}
+                oid = rzp.get("razorpay_order_id", "")
+                pid = rzp.get("razorpay_payment_id", "")
+                sig = rzp.get("razorpay_signature", "")
+                if not (oid and pid and sig and verify_razorpay_signature(oid, pid, sig)):
+                    self.send_json({"error": "Payment signature verification failed!"}, 400)
+                    return
+                with LOCK:
+                    logs = load_json(PAY_LOG_FILE, {})
+                    logs[pid] = {"user": body.get("contact", ""), "order_id": oid, "amount": PRICE_INR, "ts": time.time()}
+                    save_json(PAY_LOG_FILE, logs)
             docx_bytes = build_docx_bytes(body["project"], body)
             del body
             self.send_response(200)
