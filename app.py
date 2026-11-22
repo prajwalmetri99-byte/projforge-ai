@@ -12,7 +12,7 @@ from xml.sax.saxutils import escape
 
 DB_FILE = "users_db.json"
 LAUNCH_FILE = "launch_config.json"
-FREE_DAYS = 2  # ಮೊದಲ 2 ದಿನ ಸಂಪೂರ್ಣ ಉಚಿತ, ಆಮೇಲೆ ₹49
+FREE_DAYS = 2
 LOCK = threading.Lock()
 
 
@@ -225,14 +225,28 @@ MANIFEST_JSON = json.dumps({
 
 SW_JS = "self.addEventListener('fetch', function(e) {});"
 
+ROBOTS_TXT = "User-agent: *\nAllow: /\nSitemap: https://projforge-ai.onrender.com/sitemap.xml\n"
+
+SITEMAP_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://projforge-ai.onrender.com/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>"""
+
 HTML_PAGE = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="ProjForge AI - Instant Engineering Mini Project Generator, Budget Circuit Simulation, Ready-to-Dump Arduino/Python Code & Exact MS Word (.docx) Report Maker for VTU & Engineering Students." />
+<meta name="keywords" content="ProjForge AI, engineering project report generator, VTU mini project word format, Arduino code generator, PBL project ideas, Kannada project explanation" />
+<meta name="robots" content="index, follow" />
 <meta name="theme-color" content="#0284c7" />
 <link rel="manifest" href="/manifest.json" />
-<title>ProjForge AI — Student Project & Exact Word Report</title>
+<title>ProjForge AI — Engineering Project & Exact MS Word (.docx) Report Generator</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
   body { background: #0b1120; color: #f8fafc; min-height: 100vh; }
@@ -283,13 +297,13 @@ HTML_PAGE = r"""<!DOCTYPE html>
   <div class="modal" id="loginModal">
     <div class="mcard">
       <h2 style="color:#38bdf8;margin-bottom:6px;">Student Login</h2>
-      <p style="font-size:13px;color:#94a3b8;margin-bottom:14px;" id="loginSub">Login with Email or Mobile Number to access ProjForge AI.</p>
+      <p style="font-size:13px;color:#94a3b8;margin-bottom:14px;">Login with Email or Mobile Number to access ProjForge AI.</p>
       <input id="loginContact" placeholder="Email or 10-digit Mobile Number" onkeydown="if(event.key==='Enter') doLogin()" />
       <button class="btn-pay" style="margin-top:12px;" onclick="doLogin()">Open Studio</button>
     </div>
   </div>
 
-  <!-- Payment Modal (Only appears after 2-day free period expires) -->
+  <!-- Payment Modal -->
   <div class="modal" id="payModal" style="display:none;" onclick="if(event.target===this) this.style.display='none'">
     <div class="mcard" style="border-color:#f59e0b;">
       <div style="color:#f59e0b;font-weight:800;font-size:12px;">2-DAY FREE LAUNCH ENDED — STANDARD PLAN</div>
@@ -547,6 +561,20 @@ class StudioHandler(BaseHTTPRequestHandler):
             raw = SW_JS.encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/javascript")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+        elif self.path == "/robots.txt":
+            raw = ROBOTS_TXT.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+        elif self.path == "/sitemap.xml":
+            raw = SITEMAP_XML.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/xml")
             self.send_header("Content-Length", str(len(raw)))
             self.end_headers()
             self.wfile.write(raw)
