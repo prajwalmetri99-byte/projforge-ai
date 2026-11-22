@@ -241,6 +241,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="google-site-verification" content="SCartIuz0KkP830B_WEA5VUsTsnhn86LXdXn18LBKJQ" />
 <meta name="description" content="ProjForge AI - Instant Engineering Mini Project Generator, Budget Circuit Simulation, Ready-to-Dump Arduino/Python Code & Exact MS Word (.docx) Report Maker for VTU & Engineering Students." />
 <meta name="keywords" content="ProjForge AI, engineering project report generator, VTU mini project word format, Arduino code generator, PBL project ideas, Kannada project explanation" />
 <meta name="robots" content="index, follow" />
