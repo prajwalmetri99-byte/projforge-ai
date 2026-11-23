@@ -610,13 +610,13 @@ HTML_PAGE = """<!DOCTYPE html>
       <form id="login-form" class="space-y-3.5 mt-4">
         <div>
           <label class="text-xs text-slate-300 font-medium">Student Email ID *</label>
-          <input id="login-email" type="email" required placeholder="prajwal@college.edu.in"
+          <input id="login-email" type="email" required placeholder="student@college.edu.in"
             class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-sm focus:border-sky-400 focus:outline-none" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="text-xs text-slate-300 font-medium">Full Name *</label>
-            <input id="login-name" type="text" required placeholder="Prajwal Metri"
+            <input id="login-name" type="text" required placeholder="Rahul Sharma"
               class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-sm focus:border-sky-400 focus:outline-none" />
           </div>
           <div>
@@ -876,7 +876,6 @@ HTML_PAGE = """<!DOCTYPE html>
     let studentProfile = JSON.parse(localStorage.getItem("pf_student") || "null");
 
     window.addEventListener("DOMContentLoaded", () => {
-      // Check if opened via friend's referral link (?ref=...)
       const urlParams = new URLSearchParams(window.location.search);
       const refParam = urlParams.get("ref");
       if (refParam) {
@@ -958,7 +957,6 @@ HTML_PAGE = """<!DOCTYPE html>
       }
     }
 
-    // Refer Friends Modal Logic
     function getReferralCode() {
       if (studentProfile && studentProfile.usn && studentProfile.usn !== "1VT23CS001") {
         return "PF-" + studentProfile.usn.replace(/[^A-Z0-9]/gi, "");
