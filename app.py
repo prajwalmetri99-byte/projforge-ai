@@ -43,14 +43,14 @@ Return ONLY valid JSON matching this exact schema (no markdown fences, no extra 
     {{"paper": "Author et al. (2026) - Title", "summary": "Key finding and limitation addressed by our system."}}
   ],
   "hardware_requirements": [
-    {{"name": "Component/Hardware 1", "spec": "Detailed technical specification", "cost_inr": 450}},
-    {{"name": "Component/Hardware 2", "spec": "Detailed technical specification", "cost_inr": 250}},
-    {{"name": "Component/Hardware 3", "spec": "Detailed technical specification", "cost_inr": 180}},
-    {{"name": "Component/Hardware 4", "spec": "Detailed technical specification", "cost_inr": 120}}
+    {{"name": "ESP32 / Arduino Uno R3", "spec": "Main Microcontroller Board", "cost_inr": 450}},
+    {{"name": "Primary Sensor Module", "spec": "Input Transducer / Sensor", "cost_inr": 250}},
+    {{"name": "Actuator / Relay / Display", "spec": "Output Control Unit", "cost_inr": 180}},
+    {{"name": "Breadboard & Jumper Wires", "spec": "830-Point Solderless Breadboard + M-M/M-F Wires", "cost_inr": 140}}
   ],
   "software_requirements": [
     "OS: Windows 11 / Ubuntu 22.04 LTS",
-    "IDE / Tool: VS Code / Arduino IDE / MATLAB / Python 3.11",
+    "IDE / Tool: VS Code / Arduino IDE / Python 3.11",
     "Libraries / Frameworks: Relevant libraries for this project"
   ],
   "block_diagram_nodes": [
@@ -61,10 +61,18 @@ Return ONLY valid JSON matching this exact schema (no markdown fences, no extra 
     "Output Actuators / Cloud UI"
   ],
   "pin_connections": [
-    {{"from_pin": "Controller Pin / Module A", "to_pin": "Sensor/Module B Pin", "signal": "VCC / GND / Digital / I2C / API"}},
-    {{"from_pin": "Controller Pin / Module C", "to_pin": "Sensor/Module D Pin", "signal": "Signal Type"}},
-    {{"from_pin": "Controller Pin / Module E", "to_pin": "Output/Actuator Pin", "signal": "PWM / UART / HTTP"}},
-    {{"from_pin": "Power Rail (5V/3.3V)", "to_pin": "All Peripherals", "signal": "Regulated DC Power"}}
+    {{"from_pin": "Arduino D2 / GPIO 4", "to_pin": "Sensor OUT Pin", "signal": "Digital / Analog Input", "wire_color": "#38bdf8"}},
+    {{"from_pin": "Arduino D8 / GPIO 5", "to_pin": "Relay / Actuator IN", "signal": "PWM / Digital Control", "wire_color": "#f59e0b"}},
+    {{"from_pin": "Arduino 5V Rail", "to_pin": "Breadboard +VCC Bus", "signal": "5V DC Power", "wire_color": "#ef4444"}},
+    {{"from_pin": "Arduino GND Pin", "to_pin": "Breadboard -GND Bus", "signal": "Common Ground", "wire_color": "#94a3b8"}}
+  ],
+  "ppt_slides": [
+    {{"slide": "Slide 1: Title & Team", "points": "Project Title, USN, Guide Name & Department"}},
+    {{"slide": "Slide 2: Problem Statement", "points": "Limitations of existing manual systems & motivation"}},
+    {{"slide": "Slide 3: Objectives", "points": "Core engineering goals & target accuracy/latency"}},
+    {{"slide": "Slide 4: Block Diagram & Hardware", "points": "Controller, Sensors, Breadboard wiring & BOM"}},
+    {{"slide": "Slide 5: Working & Algorithm", "points": "Step-by-step data flow & embedded/AI logic"}},
+    {{"slide": "Slide 6: Results & Future Scope", "points": "Prototype test results, applications & scalability"}}
   ],
   "working_principle": "Detailed 350-word step-by-step explanation of system architecture, data flow, algorithm/circuit operation, and fail-safe mechanisms.",
   "source_code_language": "Python or C++",
@@ -88,9 +96,7 @@ Return ONLY valid JSON matching this exact schema (no markdown fences, no extra 
     {{"q_en": "Viva Question 7?", "a_en": "Answer 7", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 7?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 7"}},
     {{"q_en": "Viva Question 8?", "a_en": "Answer 8", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 8?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 8"}},
     {{"q_en": "Viva Question 9?", "a_en": "Answer 9", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 9?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 9"}},
-    {{"q_en": "Viva Question 10?", "a_en": "Answer 10", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 10?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 10"}},
-    {{"q_en": "Viva Question 11?", "a_en": "Answer 11", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 11?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 11"}},
-    {{"q_en": "Viva Question 12?", "a_en": "Answer 12", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 12?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 12"}}
+    {{"q_en": "Viva Question 10?", "a_en": "Answer 10", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 10?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 10"}}
   ]
 }}
 """
@@ -141,110 +147,95 @@ def _fallback_blueprint(topic, branch, level):
             {"paper": "A. Sharma et al. (2026) - Elsevier", "summary": "Introduced real-time analytics; our work simplifies deployment with open-source firmware."}
         ],
         "hardware_requirements": [
-            {"name": "ESP32 / Arduino Uno R3 Microcontroller", "spec": "32-bit Dual-Core / ATmega328P, 5V/3.3V logic", "cost_inr": 480},
-            {"name": "Primary Sensor / Transducer Module", "spec": "High-precision industrial grade sensor array", "cost_inr": 320},
-            {"name": "0.96-inch I2C OLED Display & Buzzer", "spec": "128x64 SSD1306 display + 5V active piezo", "cost_inr": 220},
-            {"name": "Relay Driver & Regulated Power Supply", "spec": "5V 2A SMPS adapter + optocoupler relay", "cost_inr": 250}
+            {"name": "Arduino Uno R3 / ESP32 Board", "spec": "ATmega328P / 32-bit Dual-Core MCU", "cost_inr": 480},
+            {"name": "Primary Sensor Module", "spec": "High-precision digital/analog sensor", "cost_inr": 260},
+            {"name": "5V Relay & Status Indicator LED", "spec": "Optocoupler relay + high-bright LED/Buzzer", "cost_inr": 190},
+            {"name": "830-Point Breadboard & Jumpers", "spec": "Solderless prototyping board + M-M wires", "cost_inr": 150}
         ],
         "software_requirements": [
             "Operating System: Windows 10/11 or Ubuntu Linux",
             "Development Environment: Arduino IDE 2.3 / VS Code / Python 3.11",
-            "Libraries: Wire.h, Adafruit_SSD1306, NumPy / Serial Monitor"
+            "Libraries: Wire.h, Adafruit_SSD1306, Serial Monitor"
         ],
         "block_diagram_nodes": [
             "Regulated Power (5V/3.3V)",
             "Multi-Sensor Input Layer",
             "Core MCU / AI Processor",
             "Threshold Control Engine",
-            "OLED, Buzzer & Actuator"
+            "Relay, LED & Actuator"
         ],
         "pin_connections": [
-            {"from_pin": "MCU GPIO D2 / SDA", "to_pin": "Sensor Data / OLED SDA", "signal": "Digital / I2C Data"},
-            {"from_pin": "MCU GPIO D3 / SCL", "to_pin": "OLED Clock Pin (SCL)", "signal": "I2C Clock"},
-            {"from_pin": "MCU GPIO D8", "to_pin": "Relay Module IN1", "signal": "Active-HIGH Control"},
-            {"from_pin": "MCU 5V & GND", "to_pin": "Sensor & Display VCC/GND", "signal": "DC Power Rail"}
+            {"from_pin": "Arduino Digital Pin D2", "to_pin": "Sensor Module OUT (Breadboard Row 12)", "signal": "Digital Input Signal", "wire_color": "#38bdf8"},
+            {"from_pin": "Arduino Digital Pin D8", "to_pin": "Relay / Actuator IN (Breadboard Row 24)", "signal": "Active-HIGH Control", "wire_color": "#f59e0b"},
+            {"from_pin": "Arduino 5V Pin", "to_pin": "Breadboard +VCC Power Rail", "signal": "+5V Regulated Supply", "wire_color": "#ef4444"},
+            {"from_pin": "Arduino GND Pin", "to_pin": "Breadboard -GND Ground Rail", "signal": "Common Ground (0V)", "wire_color": "#94a3b8"}
+        ],
+        "ppt_slides": [
+            {"slide": "Slide 1: Title & Introduction", "points": f"{clean_title} — Team Details & Guide"},
+            {"slide": "Slide 2: Problem Statement", "points": "Drawbacks of manual monitoring & need for automation"},
+            {"slide": "Slide 3: Proposed Architecture", "points": "Block diagram, Arduino/ESP32 & Breadboard interfacing"},
+            {"slide": "Slide 4: Hardware & Software", "points": "Component specs, budget (~Rs. 1,080) & firmware stack"},
+            {"slide": "Slide 5: Working & Simulation", "points": "Real-time sensor filtering & threshold actuation"},
+            {"slide": "Slide 6: Results & Conclusion", "points": "94.6% accuracy, <200ms latency & future IoT scope"}
         ],
         "working_principle": (
             f"The working of '{clean_title}' is organized into three synchronized stages: Data Acquisition, "
-            "Signal Processing, and Automated Actuation. During initialization, the controller calibrates baseline "
-            "sensor offsets and establishes I2C communication with the status display. In the continuous loop phase, "
-            "raw physical parameters are sampled every 100 milliseconds, filtered using a moving-average noise-reduction "
-            "algorithm, and compared against pre-calibrated safety thresholds. Whenever an anomaly or trigger condition "
-            "is detected, the controller immediately energizes the output driver/actuator, triggers the audio-visual alert, "
-            "and logs telemetry frames over the serial/cloud interface."
+            "Signal Processing, and Automated Actuation. All sensors and output modules are mounted on an 830-point "
+            "solderless breadboard with shared +5V and GND power rails from the microcontroller. In the continuous loop, "
+            "raw sensor values are sampled every 100 ms, filtered using a moving-average algorithm, and compared against "
+            "pre-set thresholds to trigger the relay and status indicators immediately."
         ),
-        "source_code_language": "C++ (Embedded Firmware)",
+        "source_code_language": "C++ (Arduino / Embedded Firmware)",
         "source_code": f"""// ============================================================================
 // Project: {clean_title}
 // Branch : {branch} | Level: {level}
 // Generated by ProjForge AI
 // ============================================================================
 
-#include <Wire.h>
-
-#define SENSOR_PIN A0
+#define SENSOR_PIN 2
 #define RELAY_PIN  8
-#define BUZZER_PIN 9
-#define THRESHOLD  520
-
-float filteredValue = 0.0;
-const float ALPHA = 0.25;
+#define LED_PIN    13
 
 void setup() {{
   Serial.begin(115200);
   pinMode(SENSOR_PIN, INPUT);
   pinMode(RELAY_PIN, OUTPUT);
-  pinMode(BUZZER_PIN, OUTPUT);
-
-  digitalWrite(RELAY_PIN, LOW);
-  digitalWrite(BUZZER_PIN, LOW);
-
-  Serial.println("SYSTEM INITIALIZED: {clean_title}");
-  delay(1000);
+  pinMode(LED_PIN, OUTPUT);
+  Serial.println("SYSTEM READY: {clean_title}");
 }}
 
 void loop() {{
-  int rawReading = analogRead(SENSOR_PIN);
-  filteredValue = (ALPHA * rawReading) + ((1.0 - ALPHA) * filteredValue);
-
-  Serial.print("Raw Sensor: ");
-  Serial.print(rawReading);
-  Serial.print(" | Filtered: ");
-  Serial.println(filteredValue, 2);
-
-  if (filteredValue > THRESHOLD) {{
+  int sensorState = digitalRead(SENSOR_PIN);
+  if (sensorState == HIGH) {{
     digitalWrite(RELAY_PIN, HIGH);
-    digitalWrite(BUZZER_PIN, HIGH);
-    Serial.println("[ALERT] Threshold Exceeded -> Actuator ON");
+    digitalWrite(LED_PIN, HIGH);
+    Serial.println("[ACTIVE] Trigger Detected -> Output ON");
   }} else {{
     digitalWrite(RELAY_PIN, LOW);
-    digitalWrite(BUZZER_PIN, LOW);
-    Serial.println("[NORMAL] Parameters Within Safe Range");
+    digitalWrite(LED_PIN, LOW);
+    Serial.println("[IDLE] Monitoring Normal");
   }}
-
-  delay(250);
+  delay(200);
 }}
 """,
         "results_and_discussion": (
-            "The prototype was tested across 50 consecutive operational cycles. The moving-average filter reduced "
-            "sensor jitter by 78%, while actuation latency remained consistently under 180 ms. Total bill-of-materials "
-            "cost was kept under Rs. 1,300, demonstrating strong feasibility for student lab demonstrations."
+            "The breadboard prototype was validated across 50 test cycles. Actuation latency stayed consistently "
+            "under 180 ms with clean signal transitions and zero false triggers."
         ),
         "advantages": [
-            "Low hardware cost and compact breadboard/PCB footprint",
-            "Fast response latency (< 200 ms) with built-in noise filtering",
-            "Modular architecture easily extendable to IoT cloud dashboards",
-            "User-friendly real-time status visualization"
+            "Low hardware cost and easy breadboard assembly",
+            "Fast response latency (< 200 ms)",
+            "Modular pin mapping extendable to IoT cloud",
+            "Clear visual LED and Serial telemetry"
         ],
         "applications": [
             "Smart Campus & Laboratory Automation",
             "Industrial Safety & Preventive Maintenance",
             "Energy Conservation & Resource Monitoring",
-            "Academic Research & Prototyping"
+            "Academic Mini-Project Demonstrations"
         ],
         "future_scope": (
-            "In future iterations, the system can be upgraded with an MQTT cloud broker, mobile push notifications, "
-            "and a lightweight TinyML anomaly prediction model trained on historical sensor logs."
+            "Can be upgraded with ESP32 Wi-Fi MQTT telemetry, mobile push alerts, and custom PCB fabrication."
         ),
         "references": [
             "[1] IEEE Std 1451-2024, Standard for Smart Transducer Interface for Sensors and Actuators.",
@@ -252,16 +243,12 @@ void loop() {{
             "[3] VTU Academic Project Guidelines & Technical Documentation Standards (2025-26)."
         ],
         "viva_qa": [
-            {"q_en": "What is the primary objective of your project?", "a_en": f"To automate and optimize {clean_title} with high accuracy and low cost.", "q_kn": "ನಿಮ್ಮ ಪ್ರಾಜೆಕ್ಟ್‌ನ ಮುಖ್ಯ ಉದ್ದೇಶವೇನು?", "a_kn": f"{clean_title} ಅನ್ನು ಕಡಿಮೆ ವೆಚ್ಚದಲ್ಲಿ ಮತ್ತು ಹೆಚ್ಚಿನ ನಿಖರತೆಯೊಂದಿಗೆ ಸ್ವಯಂಚಾಲಿತಗೊಳಿಸುವುದು."},
-            {"q_en": "Why did you choose this specific controller/algorithm?", "a_en": "It offers low power consumption, fast I/O response, and easy library support.", "q_kn": "ನೀವು ಈ ಕಂಟ್ರೋಲರ್/ಅಲ್ಗಾರಿದಮ್ ಅನ್ನು ಏಕೆ ಆಯ್ಕೆ ಮಾಡಿದ್ದೀರಿ?", "a_kn": "ಇದು ಕಡಿಮೆ ವಿದ್ಯುತ್ ಬಳಸುತ್ತದೆ ಮತ್ತು ವೇಗವಾಗಿ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ."},
-            {"q_en": "How do you reduce sensor noise in your system?", "a_en": "By applying a software moving-average filter before threshold comparison.", "q_kn": "ನಿಮ್ಮ ಸಿಸ್ಟಮ್‌ನಲ್ಲಿ ಸೆನ್ಸರ್ ನಾಯ್ಸ್ (Noise) ಹೇಗೆ ಕಡಿಮೆ ಮಾಡುತ್ತೀರಿ?", "a_kn": "ಸಾಫ್ಟ್‌ವೇರ್ ಮೂವಿಂಗ್-ಆವರೇಜ್ ಫಿಲ್ಟರ್ ಬಳಸುವ ಮೂಲಕ ನಾಯ್ಸ್ ಕಡಿಮೆ ಮಾಡಲಾಗುತ್ತದೆ."},
-            {"q_en": "What is the total cost of your prototype?", "a_en": "Approximately Rs. 1,270 including microcontroller, sensors, and power supply.", "q_kn": "ನಿಮ್ಮ ಪ್ರಾಜೆಕ್ಟ್ ಮಾದರಿಯ ಒಟ್ಟು ವೆಚ್ಚ ಎಷ್ಟು?", "a_kn": "ಸುಮಾರು ₹1,270 ವೆಚ್ಚವಾಗುತ್ತದೆ."},
-            {"q_en": "What happens if the power supply fluctuates?", "a_en": "A regulated 5V DC adapter with decoupling capacitors protects the logic circuit.", "q_kn": "ವಿದ್ಯುತ್ ಪೂರೈಕೆಯಲ್ಲಿ ಏರುಪೇರಾದರೆ ಏನಾಗುತ್ತದೆ?", "a_kn": "ರೆಗ್ಯುಲೇಟೆಡ್ 5V DC ಅಡಾಪ್ಟರ್ ಸರ್ಕ್ಯೂಟ್ ಅನ್ನು ಸುರಕ್ಷಿತವಾಗಿಡುತ್ತದೆ."},
-            {"q_en": "How can this project be scaled for real-world industry?", "a_en": "By adding industrial-grade IP65 enclosures, LoRaWAN/Wi-Fi telemetry, and cloud logging.", "q_kn": "ಇದನ್ನು ಕೈಗಾರಿಕಾ ಮಟ್ಟಕ್ಕೆ ಹೇಗೆ ವಿಸ್ತರಿಸಬಹುದು?", "a_kn": "Wi-Fi/IoT ಕ್ಲೌಡ್ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಮತ್ತು ಕೈಗಾರಿಕಾ ಸೆನ್ಸರ್‌ಗಳನ್ನು ಸೇರಿಸುವ ಮೂಲಕ ವಿಸ್ತರಿಸಬಹುದು."},
+            {"q_en": "What is the primary objective of your project?", "a_en": f"To automate and optimize {clean_title} with high accuracy and low cost.", "q_kn": "ನಿಮ್ಮ ಪ್ರಾಜೆಕ್ಟ್‌ನ ಮುಖ್ಯ ಉದ್ದೇಶವೇನು?", "a_kn": f"{clean_title} ಅನ್ನು ಕಡಿಮೆ ವೆಚ್ಚದಲ್ಲಿ ಸ್ವಯಂಚಾಲಿತಗೊಳಿಸುವುದು."},
+            {"q_en": "Why do we use a breadboard in prototyping?", "a_en": "It allows solderless, reusable circuit connections and easy pin debugging.", "q_kn": "ಪ್ರೊಟೊಟೈಪಿಂಗ್‌ನಲ್ಲಿ ಬ್ರೆಡ್‌ಬೋರ್ಡ್ ಏಕೆ ಬಳಸುತ್ತೇವೆ?", "a_kn": "ಸೋಲ್ಡರಿಂಗ್ ಇಲ್ಲದೆ ಸುಲಭವಾಗಿ ಕನೆಕ್ಷನ್ ಬದಲಾಯಿಸಲು ಮತ್ತು ಪರೀಕ್ಷಿಸಲು ಬಳಸುತ್ತೇವೆ."},
+            {"q_en": "What is the function of the +5V and GND rails on the breadboard?", "a_en": "They distribute common regulated power and ground reference to all connected modules.", "q_kn": "ಬ್ರೆಡ್‌ಬೋರ್ಡ್‌ನಲ್ಲಿ +5V ಮತ್ತು GND ಲೈನ್‌ಗಳ ಕೆಲಸವೇನು?", "a_kn": "ಎಲ್ಲಾ ಸೆನ್ಸರ್ ಮತ್ತು ಮಾಡ್ಯೂಲ್‌ಗಳಿಗೆ ಸಮಾನ ವಿದ್ಯುತ್ ಪೂರೈಸಲು ಬಳಸಲಾಗುತ್ತದೆ."},
+            {"q_en": "What is the total cost of your prototype?", "a_en": "Approximately Rs. 1,080 including microcontroller, sensor, relay, and breadboard.", "q_kn": "ನಿಮ್ಮ ಪ್ರಾಜೆಕ್ಟ್ ಮಾದರಿಯ ಒಟ್ಟು ವೆಚ್ಚ ಎಷ್ಟು?", "a_kn": "ಸುಮಾರು ₹1,080 ವೆಚ್ಚವಾಗುತ್ತದೆ."},
             {"q_en": "What is the response time of your system?", "a_en": "Less than 200 milliseconds from sensor trigger to output actuation.", "q_kn": "ನಿಮ್ಮ ಸಿಸ್ಟಮ್‌ನ ರೆಸ್ಪಾನ್ಸ್ ಸಮಯ ಎಷ್ಟು?", "a_kn": "200 ಮಿಲಿಸೆಕೆಂಡ್‌ಗಳಿಗಿಂತ ಕಡಿಮೆ ಸಮಯದಲ್ಲಿ ಪ್ರತಿಕ್ರಿಯಿಸುತ್ತದೆ."},
-            {"q_en": "Which communication protocol is used for the display?", "a_en": "I2C (Inter-Integrated Circuit) protocol using SDA and SCL lines.", "q_kn": "ಡಿಸ್‌ಪ್ಲೇಗಾಗಿ ಯಾವ ಕಮ್ಯುನಿಕೇಷನ್ ಪ್ರೋಟೋಕಾಲ್ ಬಳಸಲಾಗಿದೆ?", "a_kn": "SDA ಮತ್ತು SCL ಲೈನ್‌ಗಳನ್ನು ಹೊಂದಿರುವ I2C ಪ್ರೋಟೋಕಾಲ್ ಬಳಸಲಾಗಿದೆ."},
-            {"q_en": "What are the main limitations of your current prototype?", "a_en": "It currently operates locally without long-range cellular backup.", "q_kn": "ಪ್ರಸ್ತುತ ಮಾದರಿಯ ಮುಖ್ಯ ಮಿತಿಗಳೇನು?", "a_kn": "ಪ್ರಸ್ತುತ ಇದು ಸ್ಥಳೀಯವಾಗಿ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ; ದೀರ್ಘ-ಶ್ರೇಣಿಯ ಕ್ಲೌಡ್ ಬ್ಯಾಕಪ್ ಸೇರಿಸಬಹುದು."},
-            {"q_en": "How did you test and validate the results?", "a_en": "By running 50 repeated test trials and comparing sensor logs against standard instruments.", "q_kn": "ಫಲಿತಾಂಶಗಳನ್ನು ನೀವು ಹೇಗೆ ಪರೀಕ್ಷಿಸಿದ್ದೀರಿ?", "a_kn": "50 ಬಾರಿ ಪರೀಕ್ಷೆ ನಡೆಸಿ ಸ್ಟ್ಯಾಂಡರ್ಡ್ ಮೀಟರ್‌ಗಳೊಂದಿಗೆ ಹೋಲಿಸಿ ದೃಢಪಡಿಸಲಾಗಿದೆ."}
+            {"q_en": "How can this project be scaled for real-world industry?", "a_en": "By fabricating a custom PCB, adding IP65 enclosure, and integrating cloud logging.", "q_kn": "ಇದನ್ನು ಕೈಗಾರಿಕಾ ಮಟ್ಟಕ್ಕೆ ಹೇಗೆ ವಿಸ್ತರಿಸಬಹುದು?", "a_kn": "ಕಸ್ಟಮ್ PCB ಮತ್ತು IoT ಕ್ಲೌಡ್ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಸೇರಿಸುವ ಮೂಲಕ ವಿಸ್ತರಿಸಬಹುದು."}
         ]
     }
 
@@ -528,110 +515,112 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, guide_name):
     return buf
 
 
-# ==================== 3. FRONTEND HTML (FLASH + LOGIN/LOGOUT + REFER FRIENDS) ====================
+# ==================== 3. FRONTEND HTML (MULTI-PAGE + PROFILE DROPDOWN + 3D HARDWARE LAB) ====================
 HTML_PAGE = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ProjForge AI — Engineering Project & VTU Report Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ProjForge AI — 3D Hardware & VTU Project Studio</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background: #060913; color: #f1f5f9; overflow-x: hidden; }
+    * { box-sizing: border-box; }
+    html, body {
+      max-width: 100%; overflow-x: hidden;
+      font-family: 'Inter', sans-serif; background: #050811; color: #f1f5f9;
+    }
     h1, h2, h3, .brand-font { font-family: 'Space Grotesk', sans-serif; }
     code, pre { font-family: 'JetBrains Mono', monospace; }
 
+    /* 4-Sec Cinematic Splash */
     #splash-screen {
       position: fixed; inset: 0; z-index: 9999;
       background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      transition: opacity 0.7s ease, visibility 0.7s ease;
+      transition: opacity 0.6s ease, visibility 0.6s ease;
     }
     .cyber-ring {
-      width: 112px; height: 112px; border-radius: 50%;
+      width: 104px; height: 104px; border-radius: 50%;
       border: 3px solid transparent; border-top-color: #38bdf8; border-right-color: #818cf8;
       animation: spinRing 1.1s linear infinite;
-      box-shadow: 0 0 40px rgba(56, 189, 248, 0.5);
+      box-shadow: 0 0 35px rgba(56, 189, 248, 0.45);
       display: flex; align-items: center; justify-content: center;
     }
     .cyber-core {
-      width: 70px; height: 70px; border-radius: 18px;
+      width: 64px; height: 64px; border-radius: 16px;
       background: linear-gradient(135deg, #2563eb, #7c3aed);
       display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 25px; color: white;
+      font-weight: 800; font-size: 24px; color: white;
       animation: pulseCore 1.4s ease-in-out infinite alternate;
     }
     @keyframes spinRing { 100% { transform: rotate(360deg); } }
-    @keyframes pulseCore { from { transform: scale(0.92); } to { transform: scale(1.07); } }
-    .flash-bar { width: 240px; height: 4px; background: #1e293b; border-radius: 999px; overflow: hidden; margin-top: 22px; }
-    .flash-progress { height: 100%; width: 0%; background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc); animation: loadBar 3.7s ease forwards; }
+    @keyframes pulseCore { from { transform: scale(0.92); } to { transform: scale(1.06); } }
+    .flash-bar { width: 220px; height: 4px; background: #1e293b; border-radius: 999px; overflow: hidden; margin-top: 20px; }
+    .flash-progress { height: 100%; width: 0%; background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc); animation: loadBar 3.5s ease forwards; }
     @keyframes loadBar { 0% { width: 0%; } 60% { width: 78%; } 100% { width: 100%; } }
 
-    .glass { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(148, 163, 184, 0.15); }
-    .watermark-box { position: relative; overflow: hidden; }
-    .watermark-box::after {
-      content: "PROJFORGE AI • PREVIEW • DOWNLOAD DOCX FOR FULL 15+ PAGES";
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg);
-      font-size: 1.1rem; font-weight: 800; letter-spacing: 2px;
-      color: rgba(56, 189, 248, 0.11); white-space: nowrap; pointer-events: none;
-    }
+    .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(148, 163, 184, 0.14); }
+    .page-section { display: none; animation: fadeIn 0.25s ease; }
+    .page-section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
-<body>
+<body class="pb-20 md:pb-8">
 
-  <!-- 1. 4-SEC FLASH ANIMATION -->
+  <!-- 1. SPLASH SCREEN -->
   <div id="splash-screen">
     <div class="cyber-ring"><div class="cyber-core">PF</div></div>
-    <h1 class="text-3xl md:text-4xl font-bold mt-6 tracking-tight bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-      ProjForge AI Studio
+    <h1 class="text-2xl md:text-4xl font-bold mt-5 tracking-tight bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
+      ProjForge AI 3D
     </h1>
-    <p id="splash-status" class="text-xs text-slate-400 mt-2 tracking-widest uppercase">
-      Initializing Neural Circuit &amp; VTU Report Engine...
+    <p id="splash-status" class="text-[11px] text-slate-400 mt-2 tracking-widest uppercase">
+      Loading 3D Breadboard &amp; VTU Report Engine...
     </p>
     <div class="flash-bar"><div class="flash-progress"></div></div>
   </div>
 
-  <!-- 2. SMART EMAIL LOGIN MODAL -->
+  <!-- 2. LOGIN MODAL -->
   <div id="login-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
-    <div class="glass max-w-md w-full rounded-2xl p-6 md:p-8 shadow-2xl border border-sky-500/30">
+    <div class="glass max-w-md w-full rounded-2xl p-6 shadow-2xl border border-sky-500/30">
       <div class="flex items-center gap-3 mb-4">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-violet-600 flex items-center justify-center font-bold text-white">PF</div>
         <div>
-          <h2 class="text-xl font-bold text-white">Student Workspace Sign-In</h2>
+          <h2 class="text-lg font-bold text-white">Student Workspace Sign-In</h2>
           <p class="text-xs text-slate-400">Auto-fills your Name &amp; USN on VTU .docx cover pages</p>
         </div>
       </div>
 
       <div id="referred-banner" class="hidden mb-3 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-300">
-        🎉 You were invited by a friend (<span id="ref-by-code" class="font-mono font-bold"></span>)!
+        🎉 Invited by a friend (<span id="ref-by-code" class="font-mono font-bold"></span>)!
       </div>
 
-      <form id="login-form" class="space-y-3.5 mt-4">
+      <form id="login-form" class="space-y-3 mt-3">
         <div>
-          <label class="text-xs text-slate-300 font-medium">Student Email ID *</label>
+          <label class="text-xs text-slate-300">Student Email ID *</label>
           <input id="login-email" type="email" required placeholder="student@college.edu.in"
-            class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-sm focus:border-sky-400 focus:outline-none" />
+            class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm focus:border-sky-400 focus:outline-none" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="text-xs text-slate-300 font-medium">Full Name *</label>
+            <label class="text-xs text-slate-300">Full Name *</label>
             <input id="login-name" type="text" required placeholder="Rahul Sharma"
-              class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-sm focus:border-sky-400 focus:outline-none" />
+              class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm focus:border-sky-400 focus:outline-none" />
           </div>
           <div>
-            <label class="text-xs text-slate-300 font-medium">USN / Roll No *</label>
+            <label class="text-xs text-slate-300">USN / Roll No *</label>
             <input id="login-usn" type="text" required placeholder="1VT23CS045"
-              class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-sm uppercase focus:border-sky-400 focus:outline-none" />
+              class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm uppercase focus:border-sky-400 focus:outline-none" />
           </div>
         </div>
         <div>
-          <label class="text-xs text-slate-300 font-medium">College Name</label>
+          <label class="text-xs text-slate-300">College Name</label>
           <input id="login-college" type="text" placeholder="VTU Affiliated Engineering College"
-            class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-sm focus:border-sky-400 focus:outline-none" />
+            class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm focus:border-sky-400 focus:outline-none" />
         </div>
         <button type="submit"
-          class="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 font-semibold text-white shadow-lg shadow-sky-500/25 transition">
+          class="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 font-semibold text-white text-sm shadow-lg">
           Enter ProjForge Studio →
         </button>
       </form>
@@ -646,235 +635,321 @@ HTML_PAGE = """<!DOCTYPE html>
     <div class="glass max-w-md w-full rounded-2xl p-6 shadow-2xl border border-indigo-500/40 relative">
       <button onclick="closeReferModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-sm">✕</button>
       <div class="flex items-center gap-3 mb-3">
-        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-xl">🎁</div>
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-lg">🎁</div>
         <div>
-          <h2 class="text-lg font-bold text-white">Refer Friends &amp; Classmates</h2>
-          <p class="text-xs text-slate-400">Help your batchmates finish mini-projects &amp; VTU reports in seconds</p>
+          <h2 class="text-base font-bold text-white">Refer Friends &amp; Classmates</h2>
+          <p class="text-xs text-slate-400">Share ProjForge AI with your engineering batchmates</p>
         </div>
       </div>
 
-      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 mt-4">
-        <span class="text-[11px] uppercase tracking-wider text-slate-400">Your Personal Referral Code</span>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 mt-3">
+        <span class="text-[10px] uppercase tracking-wider text-slate-400">Your Referral Code</span>
         <div class="flex items-center justify-between mt-1">
-          <span id="my-ref-code" class="font-mono font-bold text-base text-sky-400">PF-STUDENT</span>
-          <button onclick="copyRefCode()" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200">Copy Code</button>
+          <span id="my-ref-code" class="font-mono font-bold text-sm text-sky-400">PF-STUDENT</span>
+          <button onclick="copyRefCode()" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200">Copy</button>
         </div>
       </div>
 
-      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 mt-3">
-        <span class="text-[11px] uppercase tracking-wider text-slate-400">Your Shareable Invite Link</span>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 mt-3">
+        <span class="text-[10px] uppercase tracking-wider text-slate-400">Invite Link</span>
         <input id="my-ref-link" type="text" readonly
-          class="w-full mt-1.5 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 font-mono focus:outline-none" />
+          class="w-full mt-1 px-2.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 font-mono" />
       </div>
 
-      <div class="grid grid-cols-2 gap-3 mt-5">
-        <button onclick="shareOnWhatsApp()"
-          class="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-white text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20">
-          <span>💬 Share on WhatsApp</span>
+      <div class="grid grid-cols-2 gap-2.5 mt-4">
+        <button onclick="shareOnWhatsApp()" class="py-2.5 px-3 rounded-xl bg-emerald-600 font-semibold text-white text-xs">
+          💬 WhatsApp Share
         </button>
-        <button onclick="copyInviteLink()"
-          class="py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-semibold text-white text-xs flex items-center justify-center gap-1.5">
-          <span>🔗 Copy Invite Link</span>
+        <button onclick="copyInviteLink()" class="py-2.5 px-3 rounded-xl bg-indigo-600 font-semibold text-white text-xs">
+          🔗 Copy Link
         </button>
       </div>
     </div>
   </div>
 
-  <!-- 4. HEADER WITH REFER & LOGOUT OPTIONS -->
-  <header class="sticky top-0 z-40 glass border-b border-slate-800">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2.5">
+  <!-- 4. CLEAN TOP NAVBAR WITH PROFILE DROPDOWN (NO OVERFLOW) -->
+  <header class="sticky top-0 z-40 glass border-b border-slate-800/90">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigatePage('page-home')">
         <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow">PF</div>
         <div>
-          <span class="brand-font font-bold text-lg text-white">ProjForge <span class="text-sky-400">AI</span></span>
-          <span class="hidden md:inline-block ml-2 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Free Student Edition</span>
+          <span class="brand-font font-bold text-base sm:text-lg text-white">ProjForge <span class="text-sky-400">AI</span></span>
+          <span class="hidden sm:inline-block ml-2 text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">3D Studio</span>
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <button onclick="openReferModal()"
-          class="text-xs px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-400/40 text-indigo-200 font-semibold transition">
-          🎁 Refer Friends
+      <!-- Desktop Page Nav -->
+      <nav class="hidden md:flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+        <button onclick="navigatePage('page-home')" id="nav-d-home" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white">🏠 Create</button>
+        <button onclick="navigatePage('page-report')" id="nav-d-report" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white">📄 Report &amp; PPT</button>
+        <button onclick="navigatePage('page-3d')" id="nav-d-3d" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white">🧊 3D Breadboard Lab</button>
+        <button onclick="navigatePage('page-code')" id="nav-d-code" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white">💻 Code &amp; Viva</button>
+      </nav>
+
+      <!-- Profile Avatar + Dropdown Menu -->
+      <div class="relative">
+        <button onclick="toggleProfileMenu()" id="profile-trigger"
+          class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200">
+          <span id="avatar-initial" class="w-6 h-6 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-[11px] text-white">G</span>
+          <span id="profile-short-name" class="max-w-[90px] truncate font-medium">Guest</span>
+          <span class="text-slate-400 text-[10px]">▼</span>
         </button>
-        <button onclick="openLoginModal()" id="user-badge"
-          class="text-xs px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200">
-          👤 Student Login
-        </button>
-        <button onclick="logoutUser()" id="logout-btn"
-          class="hidden text-xs px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-medium transition">
-          🚪 Logout
-        </button>
+
+        <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 rounded-2xl glass border border-slate-700 shadow-2xl py-2 z-50">
+          <div class="px-4 py-2 border-b border-slate-800">
+            <p id="menu-full-name" class="text-xs font-bold text-white truncate">Guest Student</p>
+            <p id="menu-usn" class="text-[11px] text-sky-400 font-mono">1VT23CS001</p>
+          </div>
+          <button onclick="closeProfileMenu(); openLoginModal();" class="w-full text-left px-4 py-2.5 text-xs text-slate-200 hover:bg-slate-800/80 flex items-center gap-2">
+            <span>✏️</span> Edit Student Profile
+          </button>
+          <button onclick="closeProfileMenu(); openReferModal();" class="w-full text-left px-4 py-2.5 text-xs text-indigo-300 hover:bg-slate-800/80 flex items-center gap-2">
+            <span>🎁</span> Refer Friends &amp; Share
+          </button>
+          <div class="border-t border-slate-800 my-1"></div>
+          <button onclick="closeProfileMenu(); logoutUser();" class="w-full text-left px-4 py-2.5 text-xs text-rose-400 hover:bg-rose-500/15 font-semibold flex items-center gap-2">
+            <span>🚪</span> Logout
+          </button>
+        </div>
       </div>
     </div>
   </header>
 
-  <!-- 5. GENERATOR SECTION -->
-  <main class="max-w-7xl mx-auto px-4 py-8">
-    <section class="text-center max-w-3xl mx-auto mb-8">
-      <h1 class="text-3xl md:text-5xl font-bold leading-tight bg-gradient-to-r from-white via-sky-200 to-indigo-300 bg-clip-text text-transparent">
-        Build Engineering Projects, Circuits &amp; 15+ Page VTU Reports in Seconds
-      </h1>
-      <p class="text-slate-400 text-sm md:text-base mt-3">
-        Gemini AI Engine • Auto Pin-to-Pin Circuit Diagrams • Working Source Code • English &amp; Kannada Viva Q&amp;A
-      </p>
-    </section>
+  <!-- ==================== PAGE 1: GENERATOR HOME ==================== -->
+  <main class="max-w-5xl mx-auto px-4 pt-6">
+    <section id="page-home" class="page-section active space-y-6">
+      <div class="text-center max-w-2xl mx-auto">
+        <span class="text-[11px] uppercase tracking-widest px-3 py-1 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20">
+          AI Engineering Workspace
+        </span>
+        <h1 class="text-2xl sm:text-4xl font-bold mt-3 leading-tight bg-gradient-to-r from-white via-sky-200 to-indigo-300 bg-clip-text text-transparent">
+          Design Projects, 3D Breadboard Circuits &amp; 15+ Page VTU Reports
+        </h1>
+        <p class="text-slate-400 text-xs sm:text-sm mt-2">
+          Enter any engineering topic below. Each section opens in its own dedicated clean workspace.
+        </p>
+      </div>
 
-    <section class="glass rounded-2xl p-5 md:p-7 max-w-4xl mx-auto shadow-2xl border border-slate-700/70">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="md:col-span-3">
-          <label class="text-xs font-semibold uppercase tracking-wider text-sky-400">Enter Your Project Topic / Idea *</label>
+      <div class="glass rounded-2xl p-5 sm:p-7 max-w-3xl mx-auto shadow-xl border border-slate-800 space-y-4">
+        <div>
+          <label class="text-xs font-semibold uppercase tracking-wider text-sky-400">Project Topic or Problem Statement *</label>
           <input id="topic-input" type="text"
-            placeholder="e.g., IoT Smart Helmet with Alcohol & Accident Detection / AI Fake News Detector"
-            class="w-full mt-1.5 px-4 py-3.5 rounded-xl bg-slate-950/90 border border-slate-700 text-white text-sm md:text-base focus:border-sky-400 focus:outline-none" />
+            placeholder="e.g., IoT Smart Helmet with Alcohol & Accident Detection"
+            class="w-full mt-1.5 px-4 py-3.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:border-sky-400 focus:outline-none" />
         </div>
 
-        <div>
-          <label class="text-xs text-slate-400">Engineering Branch</label>
-          <select id="branch-input" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white">
-            <option>Computer Science &amp; Engineering (CSE)</option>
-            <option>Electronics &amp; Communication (ECE)</option>
-            <option>Artificial Intelligence &amp; ML (AIML)</option>
-            <option>Electrical &amp; Electronics (EEE)</option>
-            <option>Information Science (ISE)</option>
-            <option>Mechanical Engineering</option>
-            <option>Civil Engineering</option>
-          </select>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <div>
+            <label class="text-xs text-slate-400">Engineering Branch</label>
+            <select id="branch-input" class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white">
+              <option>Computer Science &amp; Engineering (CSE)</option>
+              <option>Electronics &amp; Communication (ECE)</option>
+              <option>Artificial Intelligence &amp; ML (AIML)</option>
+              <option>Electrical &amp; Electronics (EEE)</option>
+              <option>Information Science (ISE)</option>
+              <option>Mechanical Engineering</option>
+              <option>Civil Engineering</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400">Academic Level</label>
+            <select id="level-input" class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white">
+              <option>2nd / 3rd Year Mini-Project</option>
+              <option>Final Year Major Capstone Project</option>
+              <option>Hackathon / Innovation Prototype</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400">Guide Name (For Certificate)</label>
+            <input id="guide-input" type="text" placeholder="Dr. S. K. Kulkarni"
+              class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white" />
+          </div>
         </div>
 
-        <div>
-          <label class="text-xs text-slate-400">Project Level</label>
-          <select id="level-input" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white">
-            <option>2nd / 3rd Year Mini-Project</option>
-            <option>Final Year Major Capstone Project</option>
-            <option>Hackathon / Innovation Prototype</option>
-          </select>
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+          <span class="text-xs text-slate-400">Quick Topics:</span>
+          <button type="button" onclick="setSample('Smart Automated Railway Gate Control using IR & Arduino')" class="text-xs px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700">🚂 Smart Railway Gate</button>
+          <button type="button" onclick="setSample('AI-Powered Leaf Disease Detection using CNN & Python')" class="text-xs px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700">🌿 Crop Disease AI</button>
+          <button type="button" onclick="setSample('Smart Fire & Gas Leakage Alert System with Relay Cutoff')" class="text-xs px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700">🔥 Gas &amp; Fire Alert</button>
         </div>
 
-        <div>
-          <label class="text-xs text-slate-400">Guide Name (For Certificate)</label>
-          <input id="guide-input" type="text" placeholder="Dr. S. K. Kulkarni"
-            class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
-        </div>
+        <button id="generate-btn" onclick="generateProject()"
+          class="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 font-bold text-white text-sm sm:text-base shadow-lg shadow-blue-600/25">
+          ⚡ Generate Complete Project &amp; Open 3D Lab
+        </button>
       </div>
 
-      <div class="flex flex-wrap items-center gap-2 mt-4">
-        <span class="text-xs text-slate-400">Try:</span>
-        <button type="button" onclick="setSample('Smart Automated Railway Gate Control using IR & ESP32')" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-sky-300 border border-slate-700">🚂 Smart Railway Gate</button>
-        <button type="button" onclick="setSample('AI-Powered Leaf Disease Detection using CNN & Python')" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-sky-300 border border-slate-700">🌿 Crop Disease AI</button>
-        <button type="button" onclick="setSample('RFID & Biometric Smart Attendance System with Cloud Log')" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-sky-300 border border-slate-700">🪪 Smart Attendance</button>
+      <!-- Quick Shortcut Cards after Generation -->
+      <div id="quick-cards" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
+        <div onclick="navigatePage('page-3d')" class="glass p-4 rounded-2xl border border-sky-500/40 cursor-pointer hover:bg-slate-900 transition">
+          <div class="text-2xl mb-1">🧊</div>
+          <h3 class="font-bold text-sm text-sky-300">Open 3D Breadboard Lab →</h3>
+          <p class="text-xs text-slate-400 mt-1">Interactive 3D Arduino, Breadboard, Sensor &amp; Live Wire Simulation</p>
+        </div>
+        <div onclick="navigatePage('page-report')" class="glass p-4 rounded-2xl border border-emerald-500/40 cursor-pointer hover:bg-slate-900 transition">
+          <div class="text-2xl mb-1">📄</div>
+          <h3 class="font-bold text-sm text-emerald-300">VTU Report &amp; PPT →</h3>
+          <p class="text-xs text-slate-400 mt-1">Download 15+ Page Word (.docx) + Seminar PPT Slides</p>
+        </div>
+        <div onclick="navigatePage('page-code')" class="glass p-4 rounded-2xl border border-purple-500/40 cursor-pointer hover:bg-slate-900 transition">
+          <div class="text-2xl mb-1">🎓</div>
+          <h3 class="font-bold text-sm text-purple-300">Code &amp; Viva Q&amp;A →</h3>
+          <p class="text-xs text-slate-400 mt-1">Ready-to-run Source Code + English &amp; Kannada Viva</p>
+        </div>
       </div>
-
-      <button id="generate-btn" onclick="generateProject()"
-        class="w-full mt-5 py-3.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:opacity-95 font-bold text-white text-base shadow-xl shadow-blue-600/25 transition">
-        ⚡ Generate Complete Project, Circuit &amp; VTU Report
-      </button>
     </section>
 
-    <!-- 6. RESULTS WORKSPACE -->
-    <section id="result-section" class="hidden mt-10 space-y-6">
-      <div class="glass rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-sky-500/30">
-        <div>
-          <span class="text-xs uppercase tracking-wider text-sky-400 font-semibold">Generated Blueprint Ready</span>
-          <h2 id="res-title" class="text-xl md:text-2xl font-bold text-white mt-0.5"></h2>
-          <p id="res-tagline" class="text-xs text-slate-400 mt-1"></p>
-        </div>
-
-        <div class="flex flex-wrap gap-2.5 shrink-0">
-          <button onclick="openReferModal()"
-            class="px-4 py-3 rounded-xl bg-indigo-600/90 hover:bg-indigo-500 font-semibold text-white text-xs border border-indigo-400/30">
-            🎁 Share with Friends
-          </button>
-          <button onclick="downloadDocxDirect()" id="download-docx-btn"
-            class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-bold text-white text-sm shadow-lg shadow-emerald-600/25">
-            📥 Download 15+ Page VTU Report (.docx)
-          </button>
-        </div>
+    <!-- ==================== PAGE 2: REPORT & PPT PAGE ==================== -->
+    <section id="page-report" class="page-section space-y-5">
+      <div id="empty-report" class="glass rounded-2xl p-8 text-center">
+        <p class="text-sm text-slate-400">No project generated yet. Go to <b>Create</b> tab and enter your topic first!</p>
+        <button onclick="navigatePage('page-home')" class="mt-3 px-4 py-2 rounded-xl bg-sky-600 text-xs font-semibold text-white">Go to Create →</button>
       </div>
 
-      <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
-        <button onclick="switchTab('tab-report', this)" class="tab-btn px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-semibold">📄 Report Preview</button>
-        <button onclick="switchTab('tab-circuit', this)" class="tab-btn px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">🔌 Block &amp; Pin Circuit Diagram</button>
-        <button onclick="switchTab('tab-code', this)" class="tab-btn px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">💻 Working Source Code</button>
-        <button onclick="switchTab('tab-viva', this)" class="tab-btn px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">🎓 Viva Q&amp;A (English + ಕನ್ನಡ)</button>
-      </div>
-
-      <!-- TAB 1 -->
-      <div id="tab-report" class="tab-panel glass watermark-box rounded-2xl p-6 space-y-5">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-bold text-sky-300">Abstract &amp; Executive Overview</h3>
-          <span class="text-[11px] px-2.5 py-1 rounded bg-slate-800 text-slate-400">Preview Mode • Full Certificate &amp; Chapters in .docx</span>
-        </div>
-        <p id="res-abstract" class="text-sm text-slate-300 leading-relaxed"></p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
-            <h4 class="text-sm font-bold text-indigo-300 mb-2">🎯 Project Objectives</h4>
-            <ul id="res-objectives" class="list-disc list-inside text-xs text-slate-300 space-y-1.5"></ul>
-          </div>
-          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
-            <h4 class="text-sm font-bold text-emerald-300 mb-2">💰 Estimated Hardware &amp; BOM Budget</h4>
-            <div id="res-bom" class="text-xs text-slate-300 space-y-1.5"></div>
-          </div>
-        </div>
-        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
-          <h4 class="text-sm font-bold text-sky-300 mb-2">⚙️ Working Methodology</h4>
-          <p id="res-working" class="text-xs text-slate-300 leading-relaxed"></p>
-        </div>
-      </div>
-
-      <!-- TAB 2 -->
-      <div id="tab-circuit" class="tab-panel hidden glass rounded-2xl p-6 space-y-5">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div id="content-report" class="hidden space-y-5">
+        <div class="glass rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-emerald-500/30">
           <div>
-            <h3 class="text-lg font-bold text-sky-300">Auto-Generated System Block &amp; Pin-Interfacing Diagram</h3>
-            <p class="text-xs text-slate-400">Download high-resolution PNG diagram for your PPT or lab record</p>
+            <span class="text-[11px] uppercase tracking-wider text-emerald-400 font-semibold">VTU / Autonomous Documentation</span>
+            <h2 id="rep-title" class="text-lg sm:text-2xl font-bold text-white mt-0.5"></h2>
+            <p id="rep-tagline" class="text-xs text-slate-400 mt-1"></p>
           </div>
-          <button onclick="downloadDiagramPNG()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white">
-            🖼️ Download Diagram Image (.PNG)
+          <button onclick="downloadDocxDirect()" id="download-docx-btn"
+            class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 font-bold text-white text-xs sm:text-sm shadow-lg shrink-0">
+            📥 Download 15+ Page .docx
           </button>
         </div>
-        <div class="overflow-x-auto bg-slate-950 rounded-xl p-4 border border-slate-800 flex justify-center">
-          <canvas id="circuit-canvas" width="860" height="360" class="max-w-full rounded-lg"></canvas>
+
+        <div class="glass rounded-2xl p-5 space-y-4">
+          <h3 class="text-base font-bold text-sky-300">Abstract &amp; Working</h3>
+          <p id="rep-abstract" class="text-xs sm:text-sm text-slate-300 leading-relaxed"></p>
+          <p id="rep-working" class="text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-slate-800 pt-3"></p>
         </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="glass rounded-2xl p-5">
+            <h3 class="text-sm font-bold text-emerald-300 mb-2">💰 Hardware Bill of Materials (BOM)</h3>
+            <div id="rep-bom" class="text-xs text-slate-300 space-y-2"></div>
+          </div>
+          <div class="glass rounded-2xl p-5">
+            <h3 class="text-sm font-bold text-indigo-300 mb-2">📊 Seminar PPT Slide Outline</h3>
+            <div id="rep-ppt" class="text-xs text-slate-300 space-y-2"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PAGE 3: SEPARATE 3D HARDWARE & BREADBOARD LAB ==================== -->
+    <section id="page-3d" class="page-section space-y-5">
+      <div class="glass rounded-2xl p-4 sm:p-5 border border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h4 class="text-sm font-bold text-indigo-300 mb-2">📌 Pin-to-Pin Connection Table</h4>
-          <div class="overflow-x-auto">
-            <table class="w-full text-xs text-left border border-slate-800">
-              <thead class="bg-slate-900 text-sky-300">
-                <tr>
-                  <th class="p-2.5 border-b border-slate-800">Controller / Source Pin</th>
-                  <th class="p-2.5 border-b border-slate-800">Sensor / Target Module Pin</th>
-                  <th class="p-2.5 border-b border-slate-800">Signal / Protocol</th>
-                </tr>
-              </thead>
-              <tbody id="res-pins" class="divide-y divide-slate-800 text-slate-300"></tbody>
-            </table>
-          </div>
+          <span class="text-[11px] uppercase tracking-wider text-sky-400 font-bold">Dedicated 3D Hardware Workbench</span>
+          <h2 id="lab3d-title" class="text-lg sm:text-xl font-bold text-white">3D Breadboard, Arduino &amp; Sensor Circuit Lab</h2>
+          <p class="text-xs text-slate-400">Drag / Touch to rotate 360° • Scroll / Pinch to zoom • Toggle Live Power Simulation</p>
         </div>
-      </div>
-
-      <!-- TAB 3 -->
-      <div id="tab-code" class="tab-panel hidden glass rounded-2xl p-6 space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 id="res-code-lang" class="text-lg font-bold text-emerald-300">Source Code</h3>
-          <button onclick="copySourceCode()" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-sky-300 border border-slate-700">
-            📋 Copy Code
+        <div class="flex flex-wrap gap-2">
+          <button onclick="toggle3DSimulation()" id="sim-toggle-btn"
+            class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-white text-xs shadow">
+            ⚡ Live Simulation: ON
+          </button>
+          <button onclick="reset3DCamera()"
+            class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700">
+            🔄 Reset 3D View
           </button>
         </div>
-        <pre id="res-code" class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-emerald-300 overflow-x-auto leading-relaxed"></pre>
       </div>
 
-      <!-- TAB 4 -->
-      <div id="tab-viva" class="tab-panel hidden glass rounded-2xl p-6 space-y-4">
-        <h3 class="text-lg font-bold text-purple-300">🎓 Top External Viva-Voce Questions (English &amp; ಕನ್ನಡ)</h3>
-        <div id="res-viva" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      <!-- 3D Interactive Canvas Container -->
+      <div class="glass rounded-2xl p-2 border border-slate-800 relative overflow-hidden">
+        <div id="threejs-container" class="w-full h-[360px] sm:h-[440px] rounded-xl bg-slate-950 cursor-grab active:cursor-grabbing"></div>
+        <!-- Legend Overlay -->
+        <div class="flex flex-wrap gap-3 px-3 py-2.5 text-[11px] text-slate-300 bg-slate-950/90 border-t border-slate-800 rounded-b-xl">
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-blue-600 inline-block"></span> Arduino / ESP32 MCU</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-slate-200 inline-block"></span> 830-Pt Breadboard</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span> Input Sensor</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-amber-500 inline-block"></span> Relay / Actuator</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span> +5V / GND / Signal Jumper Wires</span>
+        </div>
+      </div>
+
+      <!-- Pin-to-Pin Wiring Guide Below 3D Model -->
+      <div class="glass rounded-2xl p-5">
+        <h3 class="text-sm font-bold text-sky-300 mb-3">📌 Hardware Pin-to-Pin Breadboard Wiring Guide</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left border border-slate-800">
+            <thead class="bg-slate-900 text-sky-300">
+              <tr>
+                <th class="p-2.5 border-b border-slate-800">Controller Pin</th>
+                <th class="p-2.5 border-b border-slate-800">Breadboard / Module Pin</th>
+                <th class="p-2.5 border-b border-slate-800">Signal / Wire</th>
+              </tr>
+            </thead>
+            <tbody id="lab3d-pins" class="divide-y divide-slate-800 text-slate-300">
+              <tr>
+                <td class="p-2.5 font-mono text-sky-300">Arduino D2</td>
+                <td class="p-2.5 font-mono text-indigo-300">Sensor OUT (Row 12)</td>
+                <td class="p-2.5">Digital Input (Blue Wire)</td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-mono text-sky-300">Arduino D8</td>
+                <td class="p-2.5 font-mono text-indigo-300">Relay IN (Row 24)</td>
+                <td class="p-2.5">Control Output (Yellow Wire)</td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-mono text-sky-300">Arduino 5V &amp; GND</td>
+                <td class="p-2.5 font-mono text-indigo-300">Breadboard + / - Rails</td>
+                <td class="p-2.5">Power Supply (Red / Grey Wires)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PAGE 4: CODE & BILINGUAL VIVA PAGE ==================== -->
+    <section id="page-code" class="page-section space-y-5">
+      <div id="empty-code" class="glass rounded-2xl p-8 text-center">
+        <p class="text-sm text-slate-400">Generate a project first to view its working source code and Kannada + English Viva Q&amp;A.</p>
+        <button onclick="navigatePage('page-home')" class="mt-3 px-4 py-2 rounded-xl bg-sky-600 text-xs font-semibold text-white">Go to Create →</button>
+      </div>
+
+      <div id="content-code" class="hidden space-y-5">
+        <div class="glass rounded-2xl p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 id="code-lang-title" class="text-base font-bold text-emerald-300">💻 Working Source Code</h3>
+            <button onclick="copySourceCode()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-sky-300 border border-slate-700">📋 Copy Code</button>
+          </div>
+          <pre id="code-block" class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-emerald-300 overflow-x-auto leading-relaxed"></pre>
+        </div>
+
+        <div class="glass rounded-2xl p-5 space-y-3">
+          <h3 class="text-base font-bold text-purple-300">🎓 Top Viva-Voce Questions &amp; Answers (English + ಕನ್ನಡ)</h3>
+          <div id="viva-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5"></div>
+        </div>
       </div>
     </section>
   </main>
+
+  <!-- MOBILE BOTTOM NAVIGATION BAR (CLEAN 4 TABS) -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-slate-800 grid grid-cols-4 py-1.5 px-1">
+    <button onclick="navigatePage('page-home')" id="nav-m-home" class="nav-m-btn flex flex-col items-center py-1 text-sky-400 font-bold">
+      <span class="text-base">🏠</span><span class="text-[10px]">Create</span>
+    </button>
+    <button onclick="navigatePage('page-report')" id="nav-m-report" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
+      <span class="text-base">📄</span><span class="text-[10px]">Report</span>
+    </button>
+    <button onclick="navigatePage('page-3d')" id="nav-m-3d" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
+      <span class="text-base">🧊</span><span class="text-[10px]">3D Lab</span>
+    </button>
+    <button onclick="navigatePage('page-code')" id="nav-m-code" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
+      <span class="text-base">🎓</span><span class="text-[10px]">Code/Viva</span>
+    </button>
+  </nav>
 
   <script>
     let currentBlueprint = null;
     let studentProfile = JSON.parse(localStorage.getItem("pf_student") || "null");
 
+    // Splash & Init
     window.addEventListener("DOMContentLoaded", () => {
       const urlParams = new URLSearchParams(window.location.search);
       const refParam = urlParams.get("ref");
@@ -884,24 +959,59 @@ HTML_PAGE = """<!DOCTYPE html>
         document.getElementById("referred-banner").classList.remove("hidden");
       }
 
-      const steps = ["Loading Gemini Neural Architecture...", "Calibrating Circuit Renderer...", "Preparing VTU 15+ Page DOCX Engine..."];
-      let idx = 0;
-      const iv = setInterval(() => {
-        idx++;
-        if (idx < steps.length) document.getElementById("splash-status").innerText = steps[idx];
-      }, 1150);
-
       setTimeout(() => {
-        clearInterval(iv);
         const s = document.getElementById("splash-screen");
         s.style.opacity = "0";
         s.style.visibility = "hidden";
         if (!studentProfile || !studentProfile.email) {
           openLoginModal();
         } else {
-          updateUserBadge();
+          updateProfileUI();
         }
-      }, 3800);
+      }, 3400);
+
+      initThreeJS();
+    });
+
+    // Multi-Page Navigation
+    function navigatePage(pageId) {
+      document.querySelectorAll(".page-section").forEach(sec => sec.classList.remove("active"));
+      document.getElementById(pageId).classList.add("active");
+
+      // Update Desktop Nav
+      const key = pageId.replace("page-", "");
+      document.querySelectorAll(".nav-d-btn").forEach(b => {
+        b.classList.remove("bg-sky-600", "text-white");
+        b.classList.add("text-slate-300");
+      });
+      const dBtn = document.getElementById("nav-d-" + key);
+      if (dBtn) { dBtn.classList.add("bg-sky-600", "text-white"); dBtn.classList.remove("text-slate-300"); }
+
+      // Update Mobile Nav
+      document.querySelectorAll(".nav-m-btn").forEach(b => {
+        b.classList.remove("text-sky-400", "font-bold");
+        b.classList.add("text-slate-400");
+      });
+      const mBtn = document.getElementById("nav-m-" + key);
+      if (mBtn) { mBtn.classList.add("text-sky-400", "font-bold"); mBtn.classList.remove("text-slate-400"); }
+
+      if (pageId === "page-3d") {
+        setTimeout(resizeThreeJS, 60);
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    // Profile Dropdown & Auth
+    function toggleProfileMenu() {
+      document.getElementById("profile-dropdown").classList.toggle("hidden");
+    }
+    function closeProfileMenu() {
+      document.getElementById("profile-dropdown").classList.add("hidden");
+    }
+    window.addEventListener("click", (e) => {
+      if (!e.target.closest("#profile-trigger") && !e.target.closest("#profile-dropdown")) {
+        closeProfileMenu();
+      }
     });
 
     function openLoginModal() {
@@ -914,26 +1024,27 @@ HTML_PAGE = """<!DOCTYPE html>
       const m = document.getElementById("login-modal");
       m.classList.remove("hidden"); m.classList.add("flex");
     }
-
     function closeLoginModal() {
       const m = document.getElementById("login-modal");
       m.classList.add("hidden"); m.classList.remove("flex");
     }
-
     function skipLogin() {
       studentProfile = { email: "", name: "Guest Student", usn: "1VT23CS001", college: "VTU Affiliated Engineering College" };
-      updateUserBadge();
+      updateProfileUI();
       closeLoginModal();
     }
-
     function logoutUser() {
       localStorage.removeItem("pf_student");
       studentProfile = null;
       currentBlueprint = null;
       document.getElementById("login-form").reset();
-      document.getElementById("result-section").classList.add("hidden");
-      document.getElementById("user-badge").innerText = "👤 Student Login";
-      document.getElementById("logout-btn").classList.add("hidden");
+      document.getElementById("quick-cards").classList.add("hidden");
+      document.getElementById("content-report").classList.add("hidden");
+      document.getElementById("empty-report").classList.remove("hidden");
+      document.getElementById("content-code").classList.add("hidden");
+      document.getElementById("empty-code").classList.remove("hidden");
+      updateProfileUI();
+      navigatePage("page-home");
       openLoginModal();
     }
 
@@ -946,69 +1057,59 @@ HTML_PAGE = """<!DOCTYPE html>
         college: document.getElementById("login-college").value.trim() || "VTU Affiliated Engineering College"
       };
       localStorage.setItem("pf_student", JSON.stringify(studentProfile));
-      updateUserBadge();
+      updateProfileUI();
       closeLoginModal();
     });
 
-    function updateUserBadge() {
-      if (studentProfile && studentProfile.name) {
-        document.getElementById("user-badge").innerText = `👤 ${studentProfile.name} (${studentProfile.usn})`;
-        document.getElementById("logout-btn").classList.remove("hidden");
-      }
+    function updateProfileUI() {
+      const name = (studentProfile && studentProfile.name) || "Guest Student";
+      const usn = (studentProfile && studentProfile.usn) || "1VT23CS001";
+      document.getElementById("avatar-initial").innerText = name.charAt(0).toUpperCase();
+      document.getElementById("profile-short-name").innerText = name.split(" ")[0];
+      document.getElementById("menu-full-name").innerText = name;
+      document.getElementById("menu-usn").innerText = usn;
     }
 
+    // Refer Friends
     function getReferralCode() {
       if (studentProfile && studentProfile.usn && studentProfile.usn !== "1VT23CS001") {
         return "PF-" + studentProfile.usn.replace(/[^A-Z0-9]/gi, "");
       }
-      let savedCode = localStorage.getItem("pf_my_ref_code");
-      if (!savedCode) {
-        savedCode = "PF-" + Math.floor(1000 + Math.random() * 9000);
-        localStorage.setItem("pf_my_ref_code", savedCode);
+      let code = localStorage.getItem("pf_my_ref_code");
+      if (!code) {
+        code = "PF-" + Math.floor(1000 + Math.random() * 9000);
+        localStorage.setItem("pf_my_ref_code", code);
       }
-      return savedCode;
+      return code;
     }
-
     function openReferModal() {
       const code = getReferralCode();
-      const baseUrl = window.location.origin;
-      const inviteUrl = `${baseUrl}/?ref=${code}`;
       document.getElementById("my-ref-code").innerText = code;
-      document.getElementById("my-ref-link").value = inviteUrl;
+      document.getElementById("my-ref-link").value = `${window.location.origin}/?ref=${code}`;
       const m = document.getElementById("refer-modal");
       m.classList.remove("hidden"); m.classList.add("flex");
     }
-
     function closeReferModal() {
       const m = document.getElementById("refer-modal");
       m.classList.add("hidden"); m.classList.remove("flex");
     }
-
     function copyRefCode() {
       navigator.clipboard.writeText(document.getElementById("my-ref-code").innerText);
       alert("Referral code copied!");
     }
-
     function copyInviteLink() {
       navigator.clipboard.writeText(document.getElementById("my-ref-link").value);
-      alert("Invite link copied! Share it with your friends.");
+      alert("Invite link copied!");
     }
-
     function shareOnWhatsApp() {
       const link = document.getElementById("my-ref-link").value;
-      const msg = `🚀 Hey! Build your complete Engineering Mini-Project, Circuit Diagram, Source Code & 15+ Page VTU Report (.docx) with English + Kannada Viva Q&A in 10 seconds for FREE!\n\nTry ProjForge AI here:\n${link}`;
+      const msg = `🚀 Build your complete Engineering Project, 3D Breadboard Circuit & 15+ Page VTU Report (.docx) with Kannada + English Viva Q&A for FREE!\n\nTry ProjForge AI:\n${link}`;
       window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
     }
 
     function setSample(txt) { document.getElementById("topic-input").value = txt; }
 
-    function switchTab(tabId, btn) {
-      document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
-      document.getElementById(tabId).classList.remove("hidden");
-      document.querySelectorAll(".tab-btn").forEach(b => { b.classList.remove("bg-sky-600", "text-white"); b.classList.add("bg-slate-800", "text-slate-300"); });
-      btn.classList.remove("bg-slate-800", "text-slate-300"); btn.classList.add("bg-sky-600", "text-white");
-    }
-
+    // Generate Project
     async function generateProject() {
       const topic = document.getElementById("topic-input").value.trim();
       const branch = document.getElementById("branch-input").value;
@@ -1017,7 +1118,7 @@ HTML_PAGE = """<!DOCTYPE html>
 
       const btn = document.getElementById("generate-btn");
       btn.disabled = true;
-      btn.innerText = "⏳ Generating Blueprint, Circuit & Viva Q&A...";
+      btn.innerText = "⏳ Building 3D Circuit, Report & Viva Q&A...";
 
       try {
         const res = await fetch("/api/generate", {
@@ -1028,107 +1129,69 @@ HTML_PAGE = """<!DOCTYPE html>
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         currentBlueprint = data.blueprint;
-        renderBlueprint(currentBlueprint);
-        document.getElementById("result-section").classList.remove("hidden");
-        document.getElementById("result-section").scrollIntoView({ behavior: "smooth" });
+        populateAllPages(currentBlueprint);
+        document.getElementById("quick-cards").classList.remove("hidden");
+        navigatePage("page-3d");
       } catch (err) {
         alert("Error: " + err.message);
       } finally {
         btn.disabled = false;
-        btn.innerText = "⚡ Generate Complete Project, Circuit & VTU Report";
+        btn.innerText = "⚡ Generate Complete Project & Open 3D Lab";
       }
     }
 
-    function renderBlueprint(bp) {
-      document.getElementById("res-title").innerText = bp.title || "";
-      document.getElementById("res-tagline").innerText = bp.tagline || "";
-      document.getElementById("res-abstract").innerText = bp.abstract || "";
-      document.getElementById("res-working").innerText = bp.working_principle || "";
-      document.getElementById("res-objectives").innerHTML = (bp.objectives || []).map(o => `<li>${o}</li>`).join("");
+    function populateAllPages(bp) {
+      // Report Page
+      document.getElementById("empty-report").classList.add("hidden");
+      document.getElementById("content-report").classList.remove("hidden");
+      document.getElementById("rep-title").innerText = bp.title || "";
+      document.getElementById("rep-tagline").innerText = bp.tagline || "";
+      document.getElementById("rep-abstract").innerText = bp.abstract || "";
+      document.getElementById("rep-working").innerText = bp.working_principle || "";
 
       let total = 0;
-      document.getElementById("res-bom").innerHTML = (bp.hardware_requirements || []).map(h => {
+      document.getElementById("rep-bom").innerHTML = (bp.hardware_requirements || []).map(h => {
         total += Number(h.cost_inr || 0);
         return `<div class="flex justify-between border-b border-slate-800 pb-1"><span>${h.name}</span><span class="text-emerald-400 font-semibold">₹${h.cost_inr}</span></div>`;
-      }).join("") + `<div class="flex justify-between pt-1 font-bold text-white"><span>Total Prototype Cost</span><span>₹${total}</span></div>`;
+      }).join("") + `<div class="flex justify-between pt-1 font-bold text-white"><span>Total Est. Cost</span><span>₹${total}</span></div>`;
 
-      document.getElementById("res-pins").innerHTML = (bp.pin_connections || []).map(p => `
-        <tr><td class="p-2.5 font-mono text-sky-300">${p.from_pin}</td><td class="p-2.5 font-mono text-indigo-300">${p.to_pin}</td><td class="p-2.5">${p.signal}</td></tr>
+      document.getElementById("rep-ppt").innerHTML = (bp.ppt_slides || []).map(s => `
+        <div class="border-b border-slate-800 pb-1"><span class="text-sky-300 font-semibold">${s.slide}:</span> ${s.points}</div>
       `).join("");
 
-      document.getElementById("res-code-lang").innerText = `💻 ${bp.source_code_language || "Source Code"}`;
-      document.getElementById("res-code").innerText = bp.source_code || "";
+      // 3D Lab Page Pins
+      document.getElementById("lab3d-title").innerText = `3D Hardware Lab: ${bp.title || "Circuit"}`;
+      document.getElementById("lab3d-pins").innerHTML = (bp.pin_connections || []).map(p => `
+        <tr>
+          <td class="p-2.5 font-mono text-sky-300">${p.from_pin}</td>
+          <td class="p-2.5 font-mono text-indigo-300">${p.to_pin}</td>
+          <td class="p-2.5">${p.signal}</td>
+        </tr>
+      `).join("");
 
-      document.getElementById("res-viva").innerHTML = (bp.viva_qa || []).map((v, i) => `
+      // Code & Viva Page
+      document.getElementById("empty-code").classList.add("hidden");
+      document.getElementById("content-code").classList.remove("hidden");
+      document.getElementById("code-lang-title").innerText = `💻 ${bp.source_code_language || "Source Code"}`;
+      document.getElementById("code-block").innerText = bp.source_code || "";
+      document.getElementById("viva-grid").innerHTML = (bp.viva_qa || []).map((v, i) => `
         <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-1.5">
           <p class="text-xs font-bold text-sky-300">Q${i + 1}: ${v.q_en}</p>
           <p class="text-xs text-slate-300">${v.a_en}</p>
           ${v.q_kn ? `<p class="text-xs font-bold text-amber-300 pt-1">ಪ್ರಶ್ನೆ: ${v.q_kn}</p><p class="text-xs text-slate-300">${v.a_kn}</p>` : ""}
         </div>
       `).join("");
-
-      drawCircuitDiagram(bp);
-    }
-
-    function drawCircuitDiagram(bp) {
-      const canvas = document.getElementById("circuit-canvas");
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#020617"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = "rgba(56, 189, 248, 0.08)";
-      for (let x = 0; x < canvas.width; x += 25) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
-      for (let y = 0; y < canvas.height; y += 25) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
-
-      ctx.fillStyle = "#38bdf8"; ctx.font = "bold 15px Space Grotesk, sans-serif";
-      ctx.fillText("SYSTEM ARCHITECTURE: " + (bp.title || "").toUpperCase().slice(0, 52), 24, 30);
-
-      const nodes = (bp.block_diagram_nodes || []).slice(0, 5);
-      const boxW = 142, boxH = 110, startX = 24, gap = 25, y = 115;
-      nodes.forEach((node, idx) => {
-        const x = startX + idx * (boxW + gap);
-        ctx.fillStyle = idx === 2 ? "#1e3a8a" : "#0f172a";
-        ctx.strokeStyle = idx === 2 ? "#38bdf8" : "#6366f1";
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.roundRect(x, y, boxW, boxH, 12); ctx.fill(); ctx.stroke();
-
-        ctx.fillStyle = "#94a3b8"; ctx.font = "bold 10px Inter, sans-serif";
-        ctx.fillText(`STAGE 0${idx + 1}`, x + 12, y + 22);
-
-        ctx.fillStyle = "#f8fafc"; ctx.font = "bold 11px Inter, sans-serif";
-        const words = node.split(" ");
-        let line = "", lineY = y + 46;
-        words.forEach(w => {
-          if ((line + w).length > 17) { ctx.fillText(line, x + 12, lineY); line = w + " "; lineY += 16; }
-          else { line += w + " "; }
-        });
-        ctx.fillText(line, x + 12, lineY);
-
-        if (idx < nodes.length - 1) {
-          const ax1 = x + boxW + 3, ax2 = x + boxW + gap - 3, ay = y + boxH / 2;
-          ctx.strokeStyle = "#38bdf8"; ctx.beginPath(); ctx.moveTo(ax1, ay); ctx.lineTo(ax2, ay); ctx.stroke();
-          ctx.fillStyle = "#38bdf8"; ctx.beginPath(); ctx.moveTo(ax2, ay); ctx.lineTo(ax2 - 6, ay - 4); ctx.lineTo(ax2 - 6, ay + 4); ctx.fill();
-        }
-      });
-      ctx.fillStyle = "#64748b"; ctx.font = "11px Inter, sans-serif";
-      ctx.fillText("Generated by ProjForge AI Studio • Ready for VTU Report & PPT", 24, 335);
-    }
-
-    function downloadDiagramPNG() {
-      const link = document.createElement("a");
-      link.download = "ProjForge_Circuit_Diagram.png";
-      link.href = document.getElementById("circuit-canvas").toDataURL("image/png");
-      link.click();
     }
 
     function copySourceCode() {
-      navigator.clipboard.writeText(document.getElementById("res-code").innerText);
+      navigator.clipboard.writeText(document.getElementById("code-block").innerText);
       alert("Source code copied!");
     }
 
     async function downloadDocxDirect() {
       if (!currentBlueprint) return;
       const btn = document.getElementById("download-docx-btn");
-      btn.disabled = true;
-      btn.innerText = "⏳ Preparing 15+ Page VTU DOCX...";
+      btn.disabled = true; btn.innerText = "⏳ Generating DOCX...";
       try {
         const payload = {
           blueprint: currentBlueprint,
@@ -1139,26 +1202,211 @@ HTML_PAGE = """<!DOCTYPE html>
           guide_name: document.getElementById("guide-input").value.trim() || "Project Guide"
         };
         const res = await fetch("/api/download-docx", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
         });
-        if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Failed"); }
+        if (!res.ok) throw new Error("Failed");
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "ProjForge_VTU_Project_Report.docx";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        const a = document.createElement("a"); a.href = url; a.download = "ProjForge_VTU_Project_Report.docx";
+        document.body.appendChild(a); a.click(); a.remove();
       } catch (err) {
         alert("Download error: " + err.message);
       } finally {
-        btn.disabled = false;
-        btn.innerText = "📥 Download 15+ Page VTU Report (.docx)";
+        btn.disabled = false; btn.innerText = "📥 Download 15+ Page .docx";
       }
     }
+
+    // ==================== 3D INTERACTIVE BREADBOARD & ARDUINO ENGINE (THREE.JS) ====================
+    let scene, camera, renderer, circuitGroup, statusLedMesh, signalPulseMesh;
+    let simActive = true;
+    let isDragging = false, prevMouse = { x: 0, y: 0 };
+
+    function initThreeJS() {
+      const container = document.getElementById("threejs-container");
+      if (!container || typeof THREE === "undefined") return;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x030712);
+
+      camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+      camera.position.set(0, 7.5, 10.5);
+      camera.lookAt(0, 0, 0);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      container.innerHTML = "";
+      container.appendChild(renderer.domElement);
+
+      // Lights
+      scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+      const dirLight = new THREE.DirectionalLight(0x38bdf8, 1.1);
+      dirLight.position.set(6, 12, 8);
+      scene.add(dirLight);
+
+      // Lab Grid Floor
+      const grid = new THREE.GridHelper(24, 24, 0x1e3a8a, 0x0f172a);
+      grid.position.y = -0.35;
+      scene.add(grid);
+
+      circuitGroup = new THREE.Group();
+      scene.add(circuitGroup);
+
+      // 1. Arduino / ESP32 Microcontroller Board (Left)
+      const arduino = new THREE.Mesh(
+        new THREE.BoxGeometry(3.4, 0.25, 2.3),
+        new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.4 })
+      );
+      arduino.position.set(-3.1, 0, 0);
+      circuitGroup.add(arduino);
+
+      // USB Port & MCU Chip
+      const usb = new THREE.Mesh(
+        new THREE.BoxGeometry(0.7, 0.4, 0.6),
+        new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.7 })
+      );
+      usb.position.set(-4.6, 0.25, -0.4);
+      circuitGroup.add(usb);
+
+      const chip = new THREE.Mesh(
+        new THREE.BoxGeometry(1.3, 0.15, 0.45),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a })
+      );
+      chip.position.set(-2.8, 0.18, 0.1);
+      circuitGroup.add(chip);
+
+      // 2. 830-Point Solderless Breadboard (Right)
+      const breadboard = new THREE.Mesh(
+        new THREE.BoxGeometry(5.2, 0.28, 2.6),
+        new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.5 })
+      );
+      breadboard.position.set(2.2, 0, 0);
+      circuitGroup.add(breadboard);
+
+      // Power Rails (+5V Red & -GND Blue stripes on Breadboard)
+      const redRail = new THREE.Mesh(new THREE.BoxGeometry(4.9, 0.02, 0.08), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+      redRail.position.set(2.2, 0.15, -1.1);
+      circuitGroup.add(redRail);
+
+      const blueRail = new THREE.Mesh(new THREE.BoxGeometry(4.9, 0.02, 0.08), new THREE.MeshBasicMaterial({ color: 0x2563eb }));
+      blueRail.position.set(2.2, 0.15, 1.1);
+      circuitGroup.add(blueRail);
+
+      // 3. Input Sensor Module mounted on Breadboard
+      const sensor = new THREE.Mesh(
+        new THREE.BoxGeometry(1.1, 0.55, 0.8),
+        new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.3 })
+      );
+      sensor.position.set(1.0, 0.4, -0.35);
+      circuitGroup.add(sensor);
+
+      // 4. Relay / Output Actuator Module mounted on Breadboard
+      const relay = new THREE.Mesh(
+        new THREE.BoxGeometry(1.2, 0.65, 0.9),
+        new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3 })
+      );
+      relay.position.set(3.4, 0.45, 0.25);
+      circuitGroup.add(relay);
+
+      // Live Blinking LED on Breadboard
+      statusLedMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0x22c55e })
+      );
+      statusLedMesh.position.set(2.2, 0.45, -0.3);
+      circuitGroup.add(statusLedMesh);
+
+      // 5. 3D Curved Jumper Wires connecting Arduino <-> Breadboard
+      function add3DWire(p1, p2, p3, hexColor) {
+        const curve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(...p1),
+          new THREE.Vector3(...p2),
+          new THREE.Vector3(...p3)
+        ]);
+        const geo = new THREE.TubeGeometry(curve, 24, 0.045, 8, false);
+        const mat = new THREE.MeshStandardMaterial({ color: hexColor });
+        circuitGroup.add(new THREE.Mesh(geo, mat));
+      }
+
+      add3DWire([-1.7, 0.15, -0.8], [-0.4, 1.4, -1.0], [0.4, 0.16, -1.1], 0xef4444); // +5V Red
+      add3DWire([-1.7, 0.15, 0.8], [-0.4, 1.3, 1.0], [0.4, 0.16, 1.1], 0x64748b);  // GND Grey
+      add3DWire([-1.7, 0.15, -0.3], [-0.3, 1.6, -0.3], [1.0, 0.3, -0.35], 0x38bdf8); // Sensor Signal Blue
+      add3DWire([-1.7, 0.15, 0.3], [0.6, 1.8, 0.3], [3.4, 0.3, 0.25], 0xfacc15);   // Relay Control Yellow
+
+      // Moving Signal Pulse Sphere
+      signalPulseMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.11, 12, 12),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+      );
+      circuitGroup.add(signalPulseMesh);
+
+      // Mouse & Touch Rotation Controls
+      const dom = renderer.domElement;
+      dom.addEventListener("mousedown", (e) => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+      window.addEventListener("mouseup", () => { isDragging = false; });
+      window.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        circuitGroup.rotation.y += (e.clientX - prevMouse.x) * 0.01;
+        circuitGroup.rotation.x += (e.clientY - prevMouse.y) * 0.008;
+        prevMouse = { x: e.clientX, y: e.clientY };
+      });
+
+      dom.addEventListener("touchstart", (e) => {
+        if (e.touches.length === 1) {
+          isDragging = true;
+          prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+      }, { passive: true });
+      dom.addEventListener("touchmove", (e) => {
+        if (!isDragging || e.touches.length !== 1) return;
+        circuitGroup.rotation.y += (e.touches[0].clientX - prevMouse.x) * 0.012;
+        circuitGroup.rotation.x += (e.touches[0].clientY - prevMouse.y) * 0.008;
+        prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }, { passive: true });
+      dom.addEventListener("touchend", () => { isDragging = false; });
+
+      dom.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        camera.position.z = Math.max(5, Math.min(18, camera.position.z + e.deltaY * 0.01));
+      }, { passive: false });
+
+      animate3D();
+    }
+
+    let clockTick = 0;
+    function animate3D() {
+      requestAnimationFrame(animate3D);
+      if (simActive && circuitGroup) {
+        clockTick += 0.04;
+        if (!isDragging) circuitGroup.rotation.y += 0.003;
+        const pulse = (Math.sin(clockTick * 2) + 1) / 2;
+        statusLedMesh.material.color.setHex(pulse > 0.5 ? 0x22c55e : 0x064e3b);
+        signalPulseMesh.position.set(-1.7 + pulse * 5.1, 0.8 + Math.sin(pulse * Math.PI) * 0.9, 0.25);
+      }
+      if (renderer && scene && camera) renderer.render(scene, camera);
+    }
+
+    function toggle3DSimulation() {
+      simActive = !simActive;
+      const btn = document.getElementById("sim-toggle-btn");
+      btn.innerText = simActive ? "⚡ Live Simulation: ON" : "⏸️ Simulation: PAUSED";
+      btn.className = simActive
+        ? "px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-white text-xs shadow"
+        : "px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 font-bold text-white text-xs shadow";
+    }
+
+    function reset3DCamera() {
+      if (circuitGroup) { circuitGroup.rotation.set(0, 0, 0); }
+      if (camera) { camera.position.set(0, 7.5, 10.5); camera.lookAt(0, 0, 0); }
+    }
+
+    function resizeThreeJS() {
+      const container = document.getElementById("threejs-container");
+      if (!container || !renderer || !camera) return;
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    }
+    window.addEventListener("resize", resizeThreeJS);
   </script>
 </body>
 </html>
