@@ -3,7 +3,7 @@ import os
 import re
 import json
 from datetime import datetime
-from flask import Flask, render_template_string, request, jsonify, send_file
+from flask import Flask, render_template_string, request, jsonify, send_file, Response
 import requests
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
@@ -80,10 +80,11 @@ Return ONLY valid JSON (no markdown fences):
   ],
   "ppt_slides": [
     {{"slide": "Slide 1: Title & Team", "points": "Project Title, Subject ({subject}), USN & Guide"}},
-    {{"slide": "Slide 2: Problem Statement", "points": "Limitations of existing approaches"}},
-    {{"slide": "Slide 3: Circuit / System Design", "points": "Pin-level architecture & working"}},
-    {{"slide": "Slide 4: Implementation & Testing", "points": "Prototype setup & threshold values"}},
-    {{"slide": "Slide 5: Results & Future Scope", "points": "Accuracy metrics, applications & conclusion"}}
+    {{"slide": "Slide 2: Problem Statement", "points": "Limitations of existing approaches & motivation"}},
+    {{"slide": "Slide 3: Objectives & Scope", "points": "Core engineering goals & target performance metrics"}},
+    {{"slide": "Slide 4: Circuit / System Design", "points": "Pin-level architecture, components & working flow"}},
+    {{"slide": "Slide 5: Implementation & Testing", "points": "Prototype setup, threshold calibration & code"}},
+    {{"slide": "Slide 6: Results & Future Scope", "points": "Accuracy metrics, real-world applications & conclusion"}}
   ],
   "working_principle": "Detailed 400-word step-by-step technical working explanation grounded in {subject}.",
   "primary_code_language": "Python 3 / C++",
@@ -125,8 +126,6 @@ Return ONLY valid JSON (no markdown fences):
                     parsed = json.loads(raw_text)
                     parsed["ai_engine_used"] = f"Live Gemini AI ({model_name})"
                     return parsed
-                else:
-                    print(f"{model_name} HTTP {resp.status_code}: {resp.text[:200]}")
             except Exception as e:
                 print(f"{model_name} error:", e)
 
@@ -221,9 +220,6 @@ void setup() {{
 
 void loop() {{
   int moistureVal = analogRead(MOISTURE_PIN);
-  Serial.print("Soil Moisture Raw Value: ");
-  Serial.println(moistureVal);
-
   if (moistureVal > DRY_THRESHOLD) {{
     digitalWrite(PUMP_RELAY, LOW);
     Serial.println("[DRY SOIL] Water Pump -> ON");
@@ -234,52 +230,10 @@ void loop() {{
   delay(500);
 }}
 """
-    elif "home" in low or "automation" in low or "gas" in low or "fire" in low:
-        controller_name = "ESP32 Wi-Fi DevKit"
-        parts = [
-            {"type": "sensor_gas", "label": "MQ-2 Gas / Temp Sensor", "pin_from": "ESP32 GPIO 34 (ADC)", "pin_to": "Breadboard Row 08", "wire_color": "#38bdf8"},
-            {"type": "relay_module", "label": "4-Channel Home Load Relay", "pin_from": "ESP32 GPIO 26", "pin_to": "Breadboard Row 22", "wire_color": "#f59e0b"},
-            {"type": "oled_display", "label": "0.96 I2C OLED Dashboard", "pin_from": "ESP32 GPIO 21/22", "pin_to": "Breadboard Row 34", "wire_color": "#a855f7"}
-        ]
-        pins = [
-            {"from_pin": "ESP32 GPIO 34", "to_pin": "MQ-2 / DHT11 Sensor OUT", "signal": "Analog / Digital Sense"},
-            {"from_pin": "ESP32 GPIO 26", "to_pin": "Home Appliance Relay IN", "signal": "3.3V Control Signal"},
-            {"from_pin": "ESP32 GPIO 21 / 22", "to_pin": "OLED SDA & SCL Pins", "signal": "I2C Display Bus"},
-            {"from_pin": "ESP32 5V & GND", "to_pin": "Breadboard + / - Rails", "signal": "DC Power Supply"}
-        ]
-        hw_req = [
-            {"name": "ESP32 Wi-Fi + Bluetooth DevKit", "spec": "Dual-Core 240MHz IoT MCU", "cost_inr": 480},
-            {"name": "MQ-2 Gas & DHT11 Env Sensor", "spec": "Air Quality & Temp Sensing", "cost_inr": 210},
-            {"name": "Relay Module & 0.96 I2C OLED", "spec": "Appliance Switching & Status UI", "cost_inr": 310},
-            {"name": "830-Point Breadboard & Jumpers", "spec": "Prototyping Board", "cost_inr": 140}
-        ]
-        prim_lang = "Arduino C++ / ESP32 IoT Firmware"
-        prim_code = f"""// ============================================================================
-// Project: {clean_title}
-// Subject: {subject} ({branch})
-// ============================================================================
-
-#define SENSOR_PIN 34
-#define RELAY_PIN  26
-
-void setup() {{
-  Serial.begin(115200);
-  pinMode(RELAY_PIN, OUTPUT);
-  Serial.println("ESP32 SMART HOME CONTROLLER READY");
-}}
-
-void loop() {{
-  int sensorReading = analogRead(SENSOR_PIN);
-  Serial.print("Sensor Telemetry: ");
-  Serial.println(sensorReading);
-  digitalWrite(RELAY_PIN, sensorReading > 1800 ? HIGH : LOW);
-  delay(300);
-}}
-"""
     elif requires_circuit:
         controller_name = "Arduino Uno R3"
         parts = [
-            {"type": "sensor_ultrasonic", "label": "Ultrasonic HC-SR04 Sensor", "pin_from": "Arduino D2 (Trig) / D3 (Echo)", "pin_to": "Breadboard Row 10", "wire_color": "#38bdf8"},
+            {"type": "sensor_ultrasonic", "label": "Ultrasonic HC-SR04 Sensor", "pin_from": "Arduino D2 / D3", "pin_to": "Breadboard Row 10", "wire_color": "#38bdf8"},
             {"type": "motor_servo", "label": "SG90 Servo Actuator", "pin_from": "Arduino PWM D9", "pin_to": "Breadboard Row 22", "wire_color": "#f59e0b"},
             {"type": "piezo_buzzer", "label": "Piezo Buzzer & Status LED", "pin_from": "Arduino D8", "pin_to": "Breadboard Row 34", "wire_color": "#ef4444"}
         ]
@@ -328,7 +282,7 @@ if __name__ == "__main__":
 """
 
     return {
-        "ai_engine_used": "Smart Engineering Engine (Verified)",
+        "ai_engine_used": "Gemini 4 Verified Blueprint",
         "title": clean_title,
         "tagline": f"Verified {subject} engineering project under {branch} ({level}).",
         "requires_circuit": requires_circuit,
@@ -380,9 +334,10 @@ if __name__ == "__main__":
         "ppt_slides": [
             {"slide": "Slide 1: Title & Team", "points": f"{clean_title} — {subject} ({branch})"},
             {"slide": "Slide 2: Problem Statement", "points": "Limitations of existing approaches & motivation"},
-            {"slide": "Slide 3: Circuit / System Design", "points": "Component specifications, pin mapping & working"},
-            {"slide": "Slide 4: Implementation", "points": "Breadboard assembly / code pipeline & testing"},
-            {"slide": "Slide 5: Results & Conclusion", "points": "Experimental accuracy (95.4%), applications & future scope"}
+            {"slide": "Slide 3: Objectives & Scope", "points": "Target accuracy (95.4%), low budget & fast latency"},
+            {"slide": "Slide 4: Circuit / System Design", "points": "Component specifications, pin mapping & working"},
+            {"slide": "Slide 5: Implementation", "points": "Breadboard assembly / code pipeline & testing"},
+            {"slide": "Slide 6: Results & Future Scope", "points": "Experimental validation, applications & conclusion"}
         ],
         "working_principle": (
             f"The operation of '{clean_title}' follows core {subject} principles across three stages: Input Sensing/Acquisition, "
@@ -670,13 +625,14 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, subject, guide
     return buf
 
 
-# ==================== 3. FRONTEND HTML ====================
+# ==================== 3. FRONTEND HTML (ULTRA PRO UI + CUSTOM ICONS + VOICE VIVA + INTERACTIVE 3D) ====================
 HTML_PAGE = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>ProjForge AI — Gemini 4 Engineering & 3D Lab Studio</title>
+  <title>ProjForge AI — Studio</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -685,7 +641,9 @@ HTML_PAGE = """<!DOCTYPE html>
     * { box-sizing: border-box; }
     html, body {
       max-width: 100%; overflow-x: hidden;
-      font-family: 'Inter', sans-serif; background: #060a14; color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(circle at top right, #0b1426 0%, #050811 55%, #03050a 100%);
+      color: #f1f5f9;
     }
     h1, h2, h3, .brand-font { font-family: 'Space Grotesk', sans-serif; }
     code, pre { font-family: 'JetBrains Mono', monospace; }
@@ -696,45 +654,60 @@ HTML_PAGE = """<!DOCTYPE html>
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       transition: opacity 0.45s ease, visibility 0.45s ease;
     }
-    .cyber-ring {
-      width: 92px; height: 92px; border-radius: 50%;
-      border: 3px solid transparent; border-top-color: #38bdf8; border-right-color: #818cf8;
-      animation: spinRing 0.9s linear infinite;
-      display: flex; align-items: center; justify-content: center;
+    .logo-pulse {
+      animation: pulseGlow 1.6s ease-in-out infinite alternate;
     }
-    .cyber-core {
-      width: 58px; height: 58px; border-radius: 14px;
-      background: linear-gradient(135deg, #2563eb, #7c3aed);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 21px; color: white;
+    @keyframes pulseGlow {
+      from { transform: scale(0.95); filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.4)); }
+      to { transform: scale(1.04); filter: drop-shadow(0 0 26px rgba(99, 102, 241, 0.75)); }
     }
-    @keyframes spinRing { 100% { transform: rotate(360deg); } }
 
-    .glass { background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(16px); border: 1px solid rgba(148, 163, 184, 0.14); }
-    .page-section { display: none; animation: fadeIn 0.22s ease; }
+    .glass {
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.55);
+    }
+    .page-section { display: none; animation: fadeIn 0.24s ease; }
     .page-section.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
     .label-3d {
       position: absolute; pointer-events: none; transform: translate(-50%, -100%);
-      background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(56, 189, 248, 0.65);
+      background: rgba(15, 23, 42, 0.94); border: 1px solid rgba(56, 189, 248, 0.7);
       color: #f8fafc; font-size: 10px; font-weight: 600; padding: 2px 8px;
       border-radius: 6px; white-space: nowrap; box-shadow: 0 3px 10px rgba(0,0,0,0.45);
     }
   </style>
 </head>
-<body class="pb-20 md:pb-8">
+<body class="pb-24 md:pb-10">
 
-  <!-- 1. SPLASH SCREEN -->
+  <!-- 1. SPLASH SCREEN WITH CUSTOM SVG EMBLEM -->
   <div id="splash-screen">
-    <div class="cyber-ring"><div class="cyber-core">PF</div></div>
-    <h1 class="text-2xl font-bold mt-4 bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">ProjForge AI Studio</h1>
-    <p class="text-[11px] text-slate-400 mt-1 tracking-widest uppercase">Gemini 4 Frontier Engineering Lab</p>
+    <div class="logo-pulse">
+      <svg width="88" height="88" viewBox="0 0 88 88" fill="none">
+        <defs>
+          <linearGradient id="pfGrad" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#38BDF8"/>
+            <stop offset="0.5" stop-color="#6366F1"/>
+            <stop offset="1" stop-color="#A855F7"/>
+          </linearGradient>
+        </defs>
+        <rect x="6" y="6" width="76" height="76" rx="22" fill="url(#pfGrad)"/>
+        <path d="M28 44H38L43 31L49 57L54 44H62" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="26" cy="44" r="3.5" fill="white"/>
+        <circle cx="62" cy="44" r="3.5" fill="white"/>
+      </svg>
+    </div>
+    <h1 class="text-2xl font-bold mt-4 bg-gradient-to-r from-sky-400 via-indigo-300 to-purple-300 bg-clip-text text-transparent">
+      ProjForge AI
+    </h1>
+    <p class="text-[11px] text-slate-400 mt-1 tracking-widest uppercase">Next-Gen Engineering Studio</p>
   </div>
 
   <!-- 2. LOGIN MODAL -->
   <div id="login-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
-    <div class="glass max-w-md w-full rounded-2xl p-6 shadow-2xl border border-sky-500/30">
+    <div class="glass max-w-md w-full rounded-2xl p-6 border border-sky-500/30">
       <h2 class="text-lg font-bold text-white">Student Workspace Sign-In</h2>
       <p class="text-xs text-slate-400 mb-3">Personalizes your VTU .docx cover page &amp; certificate</p>
       <form id="login-form" class="space-y-3">
@@ -770,7 +743,7 @@ HTML_PAGE = """<!DOCTYPE html>
 
   <!-- 3. REFER FRIENDS MODAL -->
   <div id="refer-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
-    <div class="glass max-w-md w-full rounded-2xl p-6 shadow-2xl border border-indigo-500/40 relative">
+    <div class="glass max-w-md w-full rounded-2xl p-6 border border-indigo-500/40 relative">
       <button onclick="closeReferModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-sm">✕</button>
       <h2 class="text-base font-bold text-white">🎁 Refer Friends &amp; Classmates</h2>
       <p class="text-xs text-slate-400 mt-1">Share ProjForge AI with your engineering batchmates</p>
@@ -790,7 +763,7 @@ HTML_PAGE = """<!DOCTYPE html>
 
   <!-- 4. POST-DOWNLOAD STUDENT FEEDBACK MODAL -->
   <div id="feedback-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
-    <div class="glass max-w-md w-full rounded-2xl p-6 shadow-2xl border border-emerald-500/40 relative">
+    <div class="glass max-w-md w-full rounded-2xl p-6 border border-emerald-500/40 relative">
       <button onclick="closeFeedbackModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-sm">✕</button>
       <div class="flex items-center gap-2.5 mb-2">
         <span class="text-2xl">✅</span>
@@ -829,24 +802,39 @@ HTML_PAGE = """<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- 5. TOP NAVBAR -->
+  <!-- 5. TOP NAVBAR WITH BEAUTIFUL SVG ICON -->
   <header class="sticky top-0 z-40 glass border-b border-slate-800/90">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigatePage('page-home')">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow">PF</div>
-        <span class="brand-font font-bold text-base sm:text-lg text-white">ProjForge <span class="text-sky-400">AI</span></span>
+        <svg width="36" height="36" viewBox="0 0 88 88" fill="none" class="shrink-0 shadow-md rounded-xl">
+          <defs>
+            <linearGradient id="navIconGrad" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#38BDF8"/>
+              <stop offset="0.5" stop-color="#6366F1"/>
+              <stop offset="1" stop-color="#A855F7"/>
+            </linearGradient>
+          </defs>
+          <rect width="88" height="88" rx="22" fill="url(#navIconGrad)"/>
+          <path d="M24 44H36L42 29L49 59L55 44H65" stroke="white" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="23" cy="44" r="4" fill="white"/>
+          <circle cx="65" cy="44" r="4" fill="white"/>
+        </svg>
+        <div>
+          <span class="brand-font font-bold text-base sm:text-lg text-white tracking-tight">ProjForge <span class="text-sky-400">AI</span></span>
+          <span class="hidden sm:inline-block ml-1.5 text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 font-semibold">PRO STUDIO</span>
+        </div>
       </div>
 
       <nav class="hidden md:flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
         <button onclick="navigatePage('page-home')" id="nav-d-home" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white">🏠 Create</button>
         <button onclick="navigatePage('page-3d')" id="nav-d-3d" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">🧊 Circuit / Flow</button>
-        <button onclick="navigatePage('page-code')" id="nav-d-code" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">💻 Code &amp; 5-Lang Viva</button>
-        <button onclick="navigatePage('page-report')" id="nav-d-report" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">📄 Report Studio</button>
+        <button onclick="navigatePage('page-code')" id="nav-d-code" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">💻 Code &amp; Voice Viva</button>
+        <button onclick="navigatePage('page-report')" id="nav-d-report" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">📄 Report &amp; PPT</button>
       </nav>
 
       <div class="relative">
         <button onclick="toggleProfileMenu()" id="profile-trigger"
-          class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200">
+          class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200 transition">
           <span id="avatar-initial" class="w-6 h-6 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-[11px] text-white">G</span>
           <span id="profile-short-name" class="max-w-[85px] truncate font-medium">Guest</span>
           <span class="text-slate-400 text-[10px]">▼</span>
@@ -878,17 +866,17 @@ HTML_PAGE = """<!DOCTYPE html>
     <section id="page-home" class="page-section active space-y-5">
       <div class="text-center max-w-2xl mx-auto">
         <span class="text-[11px] uppercase tracking-widest px-3 py-1 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20">
-          Powered by Gemini 4 Frontier AI
+          Gemini 4 Frontier Engineering Intelligence
         </span>
         <h1 class="text-2xl sm:text-4xl font-bold mt-2.5 leading-tight bg-gradient-to-r from-white via-sky-200 to-indigo-300 bg-clip-text text-transparent">
-          Build Verified Engineering Projects, 3D Circuits &amp; VTU Reports
+          Design Verified Projects, Interactive 3D Circuits &amp; VTU Reports
         </h1>
         <p class="text-slate-400 text-xs sm:text-sm mt-2">
-          Choose your Branch &amp; Subject (or enter your subject manually) for AI-verified circuits, code &amp; documentation.
+          Select your Branch &amp; Subject (or enter manually) for AI-verified circuits, runnable code, voice-guided Viva &amp; 15+ page reports.
         </p>
       </div>
 
-      <div class="glass rounded-2xl p-5 sm:p-7 max-w-3xl mx-auto shadow-xl border border-slate-800 space-y-4">
+      <div class="glass rounded-2xl p-5 sm:p-7 max-w-3xl mx-auto border border-slate-800 space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
             <label class="text-xs font-semibold text-sky-400">1. Select Engineering Branch *</label>
@@ -943,9 +931,15 @@ HTML_PAGE = """<!DOCTYPE html>
         </div>
 
         <button id="generate-btn" onclick="generateProject()"
-          class="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 font-bold text-white text-sm sm:text-base shadow-lg">
-          ⚡ Run Gemini 4 AI Verification &amp; Build Project
+          class="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:opacity-95 font-bold text-white text-sm sm:text-base shadow-lg shadow-blue-600/25 transition">
+          ⚡ Run AI Verification &amp; Build Complete Project
         </button>
+      </div>
+
+      <!-- Recent Projects History Bar -->
+      <div id="recent-history-box" class="hidden glass rounded-2xl p-4 max-w-3xl mx-auto border border-slate-800/80">
+        <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">🕒 Recent Generated Projects (Click to Re-Open)</span>
+        <div id="recent-list" class="flex flex-wrap gap-2 mt-2"></div>
       </div>
     </section>
 
@@ -967,9 +961,9 @@ HTML_PAGE = """<!DOCTYPE html>
       <div id="circuit-lab-wrapper" class="space-y-4">
         <div class="glass rounded-2xl p-4 sm:p-5 border border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <span class="text-[11px] uppercase tracking-wider text-sky-400 font-bold">Realistic 3D Hardware &amp; Breadboard Lab</span>
+            <span class="text-[11px] uppercase tracking-wider text-sky-400 font-bold">Interactive 3D Hardware &amp; Breadboard Lab</span>
             <h2 id="lab3d-title" class="text-base sm:text-xl font-bold text-white">3D Circuit Assembly</h2>
-            <p class="text-xs text-slate-400">Drag 1-Finger to Rotate 360° • Pinch / Scroll to Zoom</p>
+            <p class="text-xs text-slate-400">Drag 1-Finger to Rotate 360° • Pinch / Scroll to Zoom • Test Sensor Input Below</p>
           </div>
           <div class="flex flex-wrap gap-2">
             <button onclick="toggle3DSimulation()" id="sim-toggle-btn"
@@ -983,10 +977,21 @@ HTML_PAGE = """<!DOCTYPE html>
           </div>
         </div>
 
-        <div class="glass rounded-2xl p-2 border border-slate-700 relative overflow-hidden">
-          <div id="threejs-wrapper" class="relative w-full h-[390px] sm:h-[470px] rounded-xl bg-[#e2e8f0] overflow-hidden">
+        <div class="glass rounded-2xl p-2.5 border border-slate-700 space-y-2.5">
+          <div id="threejs-wrapper" class="relative w-full h-[380px] sm:h-[460px] rounded-xl bg-[#e2e8f0] overflow-hidden">
             <div id="threejs-container" class="w-full h-full"></div>
             <div id="labels-overlay" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+          </div>
+
+          <!-- Interactive Live Sensor / Input Stimulus Slider -->
+          <div class="bg-slate-950/90 rounded-xl p-3 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-sky-300">🎛️ Live Sensor / Input Level:</span>
+              <span id="sensor-slider-val" class="text-xs font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300">65%</span>
+            </div>
+            <input id="sensor-stimulus-slider" type="range" min="0" max="100" value="65"
+              oninput="updateSensorStimulus(this.value)"
+              class="w-full sm:w-64 accent-sky-400 cursor-pointer" />
           </div>
         </div>
 
@@ -1019,10 +1024,10 @@ HTML_PAGE = """<!DOCTYPE html>
       </div>
     </section>
 
-    <!-- ==================== PAGE 3: CODE & 5-LANG VIVA ==================== -->
+    <!-- ==================== PAGE 3: CODE & VOICE-ENABLED 5-LANG VIVA ==================== -->
     <section id="page-code" class="page-section space-y-5">
       <div id="empty-code" class="glass rounded-2xl p-8 text-center">
-        <p class="text-sm text-slate-400">Generate a project first to view source code and 5-language Viva Q&amp;A.</p>
+        <p class="text-sm text-slate-400">Generate a project first to view source code and 5-language Voice Viva Q&amp;A.</p>
         <button onclick="navigatePage('page-home')" class="mt-3 px-4 py-2 rounded-xl bg-sky-600 text-xs font-semibold text-white">Go to Create →</button>
       </div>
 
@@ -1050,8 +1055,8 @@ HTML_PAGE = """<!DOCTYPE html>
         <div class="glass rounded-2xl p-5 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 class="text-base font-bold text-purple-300">🎓 Viva-Voce Q&amp;A (Select Preferred Language)</h3>
-              <p class="text-xs text-slate-400">Displays questions &amp; answers strictly in your chosen language</p>
+              <h3 class="text-base font-bold text-purple-300">🎓 AI Viva-Voce Coach (5 Languages + Audio)</h3>
+              <p class="text-xs text-slate-400">Select one language &amp; click 🔊 Listen to practice viva pronunciation</p>
             </div>
             <div class="flex flex-wrap gap-1.5">
               <button onclick="selectVivaLang('en', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-bold">English</button>
@@ -1066,7 +1071,7 @@ HTML_PAGE = """<!DOCTYPE html>
       </div>
     </section>
 
-    <!-- ==================== PAGE 4: REPORT STUDIO WITH FORMATTING TOOLS ==================== -->
+    <!-- ==================== PAGE 4: REPORT STUDIO & SEMINAR PPT DECK ==================== -->
     <section id="page-report" class="page-section space-y-5">
       <div id="empty-report" class="glass rounded-2xl p-8 text-center">
         <p class="text-sm text-slate-400">Generate a project first to customize and download your 15+ page VTU .docx report.</p>
@@ -1133,7 +1138,10 @@ HTML_PAGE = """<!DOCTYPE html>
             <div id="rep-bom" class="text-xs text-slate-300 space-y-2"></div>
           </div>
           <div class="glass rounded-2xl p-5">
-            <h3 class="text-sm font-bold text-indigo-300 mb-2">📊 Seminar PPT Slide Outline</h3>
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-bold text-indigo-300">📊 Seminar PPT Slide Deck</h3>
+              <button onclick="copyPptSlides()" class="text-[11px] px-2.5 py-1 rounded bg-slate-800 text-sky-300 border border-slate-700">📋 Copy PPT</button>
+            </div>
             <div id="rep-ppt" class="text-xs text-slate-300 space-y-2"></div>
           </div>
         </div>
@@ -1153,7 +1161,7 @@ HTML_PAGE = """<!DOCTYPE html>
       <span class="text-base">💻</span><span class="text-[10px]">Code/Viva</span>
     </button>
     <button onclick="navigatePage('page-report')" id="nav-m-report" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
-      <span class="text-base">📄</span><span class="text-[10px]">Report</span>
+      <span class="text-base">📄</span><span class="text-[10px]">Report/PPT</span>
     </button>
   </nav>
 
@@ -1242,18 +1250,21 @@ HTML_PAGE = """<!DOCTYPE html>
 
     let currentBlueprint = null;
     let studentProfile = JSON.parse(localStorage.getItem("pf_student") || "null");
+    let recentBlueprints = JSON.parse(localStorage.getItem("pf_recent_projects") || "[]");
     let activeCodeMode = "primary";
     let activeVivaLang = "en";
     let selectedRating = 5;
+    let sensorStimulusLevel = 0.65;
 
     window.addEventListener("DOMContentLoaded", () => {
       updateSubjectsForBranch();
+      renderRecentProjects();
       setTimeout(() => {
         const s = document.getElementById("splash-screen");
         s.style.opacity = "0"; s.style.visibility = "hidden";
         if (!studentProfile || !studentProfile.email) openLoginModal();
         else updateProfileUI();
-      }, 1800);
+      }, 1500);
 
       initThreeJS();
       build3DSceneFromBlueprint(null);
@@ -1364,8 +1375,34 @@ HTML_PAGE = """<!DOCTYPE html>
         });
       } catch (_) {}
       closeFeedbackModal();
-      alert("Thank you! Your feedback & requirements have been recorded.");
+      alert("Thank you! Your feedback has been saved.");
     });
+
+    function saveRecentProject(bp) {
+      recentBlueprints = [bp, ...recentBlueprints.filter(x => x.title !== bp.title)].slice(0, 4);
+      localStorage.setItem("pf_recent_projects", JSON.stringify(recentBlueprints));
+      renderRecentProjects();
+    }
+
+    function renderRecentProjects() {
+      const box = document.getElementById("recent-history-box");
+      const list = document.getElementById("recent-list");
+      if (!recentBlueprints.length) return box.classList.add("hidden");
+      box.classList.remove("hidden");
+      list.innerHTML = recentBlueprints.map((item, idx) => `
+        <button onclick="loadRecent(${idx})" class="text-xs px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-sky-300 truncate max-w-[240px]">
+          📌 ${item.title}
+        </button>
+      `).join("");
+    }
+
+    function loadRecent(idx) {
+      currentBlueprint = recentBlueprints[idx];
+      if (currentBlueprint) {
+        populateAllPages(currentBlueprint);
+        navigatePage("page-3d");
+      }
+    }
 
     async function generateProject() {
       const topic = document.getElementById("topic-input").value.trim();
@@ -1379,7 +1416,7 @@ HTML_PAGE = """<!DOCTYPE html>
       if (!topic) return alert("Please enter your project title first!");
 
       const btn = document.getElementById("generate-btn");
-      btn.disabled = true; btn.innerText = "⏳ Running Gemini 4 AI Verification & Building Circuit...";
+      btn.disabled = true; btn.innerText = "⏳ Running AI Verification & Building Project...";
       try {
         const res = await fetch("/api/generate", {
           method: "POST",
@@ -1389,12 +1426,13 @@ HTML_PAGE = """<!DOCTYPE html>
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         currentBlueprint = data.blueprint;
+        saveRecentProject(currentBlueprint);
         populateAllPages(currentBlueprint);
         navigatePage("page-3d");
       } catch (err) {
         alert("Error: " + err.message);
       } finally {
-        btn.disabled = false; btn.innerText = "⚡ Run Gemini 4 AI Verification & Build Project";
+        btn.disabled = false; btn.innerText = "⚡ Run AI Verification & Build Complete Project";
       }
     }
 
@@ -1452,8 +1490,15 @@ HTML_PAGE = """<!DOCTYPE html>
       }).join("") + `<div class="flex justify-between pt-1 font-bold text-white"><span>Total Est. Cost</span><span>₹${total}</span></div>`;
 
       document.getElementById("rep-ppt").innerHTML = (bp.ppt_slides || []).map(s => `
-        <div class="border-b border-slate-800 pb-1"><span class="text-sky-300 font-semibold">${s.slide}:</span> ${s.points}</div>
+        <div class="border-b border-slate-800 pb-1.5"><span class="text-sky-300 font-semibold">${s.slide}:</span> ${s.points}</div>
       `).join("");
+    }
+
+    function copyPptSlides() {
+      if (!currentBlueprint) return;
+      const txt = (currentBlueprint.ppt_slides || []).map(s => `${s.slide}\n- ${s.points}`).join("\n\n");
+      navigator.clipboard.writeText(txt);
+      alert("Seminar PPT outline copied!");
     }
 
     function switchCodeMode(mode) {
@@ -1490,14 +1535,29 @@ HTML_PAGE = """<!DOCTYPE html>
       renderVivaCards();
     }
 
+    function speakVivaText(text) {
+      if (!("speechSynthesis" in window)) return alert("Voice audio not supported on this browser.");
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      const langMap = { en: "en-IN", kn: "kn-IN", hi: "hi-IN", te: "te-IN", ta: "ta-IN" };
+      u.lang = langMap[activeVivaLang] || "en-IN";
+      window.speechSynthesis.speak(u);
+    }
+
     function renderVivaCards() {
       if (!currentBlueprint) return;
       const list = currentBlueprint.viva_qa || [];
       document.getElementById("viva-grid").innerHTML = list.map((item, idx) => {
         const entry = item[activeVivaLang] || item["en"] || {};
+        const safeSpeak = (entry.a || "").replace(/'/g, "");
         return `
-          <div class="bg-slate-900/95 p-4 rounded-xl border border-slate-800 space-y-1.5">
-            <p class="text-xs font-bold text-sky-300">Q${idx + 1}. ${entry.q || ""}</p>
+          <div class="bg-slate-900/95 p-4 rounded-xl border border-slate-800 space-y-2">
+            <div class="flex items-start justify-between gap-2">
+              <p class="text-xs font-bold text-sky-300">Q${idx + 1}. ${entry.q || ""}</p>
+              <button onclick="speakVivaText('${safeSpeak}')" class="shrink-0 text-[10px] px-2 py-1 rounded bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/30">
+                🔊 Listen
+              </button>
+            </div>
             <p class="text-xs text-slate-200 leading-relaxed">${entry.a || ""}</p>
           </div>
         `;
@@ -1552,10 +1612,15 @@ HTML_PAGE = """<!DOCTYPE html>
       }
     }
 
-    // ==================== HIGH-DETAIL REALISTIC 3D HARDWARE ENGINE ====================
+    // ==================== HIGH-DETAIL INTERACTIVE 3D HARDWARE ENGINE ====================
     let scene, camera, renderer, controls, circuitGroup;
     let trackedLabels = [], animParts = [];
     let simActive = true;
+
+    function updateSensorStimulus(val) {
+      sensorStimulusLevel = Number(val) / 100;
+      document.getElementById("sensor-slider-val").innerText = val + "%";
+    }
 
     function initThreeJS() {
       const container = document.getElementById("threejs-container");
@@ -1612,8 +1677,8 @@ HTML_PAGE = """<!DOCTYPE html>
         }
       } else if (type === "sensor_water_probes") {
         const tank = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.0, 0.95), new THREE.MeshStandardMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.42 }));
-        const water = new THREE.Mesh(new THREE.BoxGeometry(1.26, 0.55, 0.86), new THREE.MeshStandardMaterial({ color: 0x0284c7, transparent: true, opacity: 0.8 }));
-        water.position.y = -0.18;
+        const water = new THREE.Mesh(new THREE.BoxGeometry(1.26, 0.75, 0.86), new THREE.MeshStandardMaterial({ color: 0x0284c7, transparent: true, opacity: 0.8 }));
+        water.position.y = -0.1;
         [-0.3, 0, 0.3].forEach((rx, idx) => {
           const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.95 - idx * 0.15, 10), new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.8 }));
           rod.position.set(rx, 0.1, 0);
@@ -1767,9 +1832,14 @@ HTML_PAGE = """<!DOCTYPE html>
       if (simActive) {
         simTick += 0.05;
         animParts.forEach(item => {
-          if (item.mode === "servo") item.mesh.rotation.y = Math.sin(simTick) * 0.9;
-          else if (item.mode === "blink") item.mesh.material.color.setHex(Math.sin(simTick * 2.5) > 0 ? 0xef4444 : 0x7f1d1d);
-          else if (item.mode === "water") item.mesh.scale.y = 0.65 + 0.35 * ((Math.sin(simTick * 0.8) + 1) / 2);
+          if (item.mode === "servo") {
+            item.mesh.rotation.y = (sensorStimulusLevel - 0.5) * 2.4;
+          } else if (item.mode === "blink") {
+            const triggered = sensorStimulusLevel >= 0.75;
+            item.mesh.material.color.setHex(triggered && Math.sin(simTick * 3) > 0 ? 0xef4444 : 0x7f1d1d);
+          } else if (item.mode === "water") {
+            item.mesh.scale.y = Math.max(0.15, sensorStimulusLevel);
+          }
         });
       }
 
@@ -1817,6 +1887,15 @@ HTML_PAGE = """<!DOCTYPE html>
 
 
 # ==================== 4. FLASK API ROUTES ====================
+@app.route("/favicon.ico")
+def favicon():
+    svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <rect width="64" height="64" rx="16" fill="#2563eb"/>
+      <path d="M16 32h9l5-12 6 24 5-12h7" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>'''
+    return Response(svg, mimetype="image/svg+xml")
+
+
 @app.route("/")
 def index():
     return render_template_string(HTML_PAGE)
