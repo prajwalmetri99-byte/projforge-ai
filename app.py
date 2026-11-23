@@ -18,80 +18,93 @@ app = Flask(__name__)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
 
-# ==================== 1. GEMINI AI ENGINE (DYNAMIC 3D + MULTI-LANG + DUAL CODE) ====================
-def generate_project_blueprint(topic, branch, level):
+# ==================== 1. GEMINI AI ENGINE (SUBJECT-AWARE + SMART 3D CIRCUIT) ====================
+def generate_project_blueprint(topic, branch, subject, level):
     if GEMINI_API_KEY:
         try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
             prompt = f"""
 You are a senior Indian Engineering Professor (VTU / Autonomous curriculum) and Principal Systems Architect.
-Generate a comprehensive engineering project blueprint in strict JSON format for:
+Generate a deep, subject-aligned engineering project blueprint in strict JSON format for:
 - Project Title / Topic: "{topic}"
 - Engineering Branch: "{branch}"
+- Core Academic Subject: "{subject}"
 - Academic Level: "{level}"
 
-IMPORTANT RULES:
-1. "primary_code_language" and "primary_code": MUST match the project domain! If the project is AI/ML, Data Science, Image Processing, or Software, write complete runnable Python code (e.g., TensorFlow/OpenCV/Flask/Scikit-learn, 60-90 lines). If it is purely embedded/IoT, write C++/Python.
-2. "has_arduino_hardware": true if sensors/motors/IoT/embedded hardware is applicable, else false.
-3. "arduino_code": Always provide a complete, compilable Arduino (.ino) sketch if hardware/sensors can be interfaced with this project (or an optional IoT/hardware edge node sketch).
-4. "circuit_3d_parts": Provide 3 to 5 specific 3D hardware modules tailored specifically to THIS project (choose types from: "sensor_ultrasonic", "sensor_gas", "sensor_ir", "sensor_temp", "camera_module", "motor_servo", "relay_module", "oled_display", "buzzer_alarm", "led_indicator").
-5. "viva_qa": Provide 8 high-value viva questions & answers translated naturally into all 5 languages: English ("en"), Kannada ("kn"), Hindi ("hi"), Telugu ("te"), and Tamil ("ta").
+CRITICAL RULES:
+1. Subject Alignment: The entire methodology, algorithms/circuits, components, and viva questions MUST strictly align with the chosen subject "{subject}" under "{branch}".
+2. "requires_circuit": Set to true ONLY IF the project involves electronics, analog/digital circuits (Op-Amp, 555 timer, logic gates), microcontrollers (Arduino/ESP32), sensors, motors, or IoT hardware. Set to false if it is a pure software/web/database/AI software-only project!
+3. If "requires_circuit" is true:
+   - Populate "circuit_3d_parts" with 3 to 5 specific components matching the exact project (choose types from: "ic_opamp", "sensor_water_probes", "sensor_ultrasonic", "sensor_gas", "sensor_ir", "motor_servo", "relay_module", "oled_display", "piezo_buzzer", "led_bar").
+   - Set "controller_or_supply" to either "9V DC Regulated Supply (Analog)" (if pure analog/Op-Amp/555 without MCU) or "Arduino Uno R3 / ESP32".
+4. If "requires_circuit" is false:
+   - Populate "software_architecture_nodes" with 5 specific software/AI/database pipeline stages.
+5. "primary_code_language" and "primary_code": Provide 75-100 lines of clean, runnable code matching the subject (e.g., Python/SQL/HTML-JS for software, or MATLAB/Python simulation / Arduino C++ for hardware).
+6. "viva_qa": Provide 8 subject-focused viva questions & answers in all 5 languages: "en", "kn", "hi", "te", "ta".
 
-Return ONLY valid JSON matching this exact schema (no markdown fences):
+Return ONLY valid JSON (no markdown fences):
 {{
   "title": "Formal Engineering Project Title",
-  "tagline": "One-line technical summary",
-  "abstract": "Detailed 240-word academic abstract covering problem statement, methodology, core tech, and results.",
-  "problem_statement": "Detailed 150-word problem definition explaining drawbacks in existing systems.",
-  "objectives": ["Objective 1", "Objective 2", "Objective 3", "Objective 4"],
+  "tagline": "One-line technical summary aligned with {subject}",
+  "requires_circuit": true,
+  "controller_or_supply": "Arduino Uno R3 or 9V DC Analog Supply",
+  "abstract": "Detailed 280-word academic abstract covering problem statement, {subject} principles, proposed design, and results.",
+  "problem_statement": "Detailed 180-word problem definition explaining existing drawbacks.",
+  "objectives": ["Objective 1", "Objective 2", "Objective 3", "Objective 4", "Objective 5"],
   "literature_survey": [
-    {{"paper": "Author et al. (2024) - Title", "summary": "Key finding and research gap."}},
-    {{"paper": "Author et al. (2025) - Title", "summary": "Key finding and research gap."}},
-    {{"paper": "Author et al. (2026) - Title", "summary": "Key finding and research gap."}}
+    {{"paper": "R. Sharma et al. (2024) - IEEE Transactions", "summary": "Key finding and research gap addressed."}},
+    {{"paper": "K. Kulkarni & S. Rao (2025) - Springer", "summary": "Key finding and research gap addressed."}},
+    {{"paper": "A. Verma et al. (2026) - Elsevier", "summary": "Key finding and research gap addressed."}}
   ],
   "hardware_requirements": [
-    {{"name": "Component 1", "spec": "Specification", "cost_inr": 450}},
-    {{"name": "Component 2", "spec": "Specification", "cost_inr": 250}},
-    {{"name": "Component 3", "spec": "Specification", "cost_inr": 180}},
-    {{"name": "Breadboard & Jumpers", "spec": "830-Point Breadboard + Wires", "cost_inr": 140}}
+    {{"name": "Component 1", "spec": "Detailed spec", "cost_inr": 350}},
+    {{"name": "Component 2", "spec": "Detailed spec", "cost_inr": 220}},
+    {{"name": "Component 3", "spec": "Detailed spec", "cost_inr": 180}},
+    {{"name": "830-Point Breadboard & Jumpers", "spec": "Solderless prototyping board", "cost_inr": 140}}
   ],
   "software_requirements": [
-    "OS: Windows 11 / Ubuntu 22.04",
-    "IDE: VS Code / Python 3.11 / Arduino IDE",
-    "Libraries: Project specific libraries"
+    "OS: Windows 11 / Ubuntu 22.04 LTS",
+    "Tools: Subject-specific IDE / Simulator / Python 3.11",
+    "Libraries: Relevant libraries"
   ],
-  "controller_board": "Arduino Uno R3 or ESP32 DevKit",
   "circuit_3d_parts": [
-    {{"type": "camera_module", "label": "Vision Sensor / Cam", "pin_from": "GPIO 21 / USB", "pin_to": "Breadboard Row 10", "wire_color": "#38bdf8"}},
-    {{"type": "oled_display", "label": "0.96 I2C OLED", "pin_from": "SDA/SCL (A4/A5)", "pin_to": "Breadboard Row 22", "wire_color": "#a855f7"}},
-    {{"type": "buzzer_alarm", "label": "Alert Buzzer & LED", "pin_from": "Digital Pin D8", "pin_to": "Breadboard Row 34", "wire_color": "#f59e0b"}}
+    {{"type": "ic_opamp", "label": "LM324 / IC 741 Op-Amp", "pin_from": "VCC (+9V) / IN+", "pin_to": "Breadboard Center DIP", "wire_color": "#38bdf8"}},
+    {{"type": "sensor_water_probes", "label": "Sensor / Probe Array", "pin_from": "Probe Sense Lead", "pin_to": "Breadboard Row 12", "wire_color": "#22c55e"}},
+    {{"type": "led_bar", "label": "LED Level & Piezo Alert", "pin_from": "Output Pin 1 / Pin 7", "pin_to": "Breadboard Row 28", "wire_color": "#f59e0b"}}
+  ],
+  "software_architecture_nodes": [
+    "User Input / Client UI",
+    "API Gateway & Validation",
+    "Core {subject} Engine",
+    "Database / Model Storage",
+    "Analytics & Output Dashboard"
   ],
   "pin_connections": [
-    {{"from_pin": "Controller Pin 1", "to_pin": "Module 1 Pin", "signal": "Signal Type"}},
-    {{"from_pin": "Controller Pin 2", "to_pin": "Module 2 Pin", "signal": "Signal Type"}},
-    {{"from_pin": "Controller 5V", "to_pin": "Breadboard +VCC Rail", "signal": "5V DC Power"}},
-    {{"from_pin": "Controller GND", "to_pin": "Breadboard -GND Rail", "signal": "Common Ground"}}
+    {{"from_pin": "Pin / Module A", "to_pin": "Breadboard / Target B", "signal": "Signal / Voltage"}},
+    {{"from_pin": "Pin / Module C", "to_pin": "Breadboard / Target D", "signal": "Signal / Voltage"}},
+    {{"from_pin": "Power +VCC", "to_pin": "Breadboard Red Rail", "signal": "+5V / +9V DC"}},
+    {{"from_pin": "Ground GND", "to_pin": "Breadboard Blue Rail", "signal": "0V Reference"}}
   ],
   "ppt_slides": [
-    {{"slide": "Slide 1: Title & Team", "points": "Project Title, USN, Guide Name & Department"}},
-    {{"slide": "Slide 2: Problem Statement", "points": "Limitations of existing systems & motivation"}},
-    {{"slide": "Slide 3: Proposed Architecture", "points": "System flow, algorithms & hardware/software stack"}},
-    {{"slide": "Slide 4: Implementation", "points": "Code pipeline, circuit interfacing & testing"}},
-    {{"slide": "Slide 5: Results & Conclusion", "points": "Accuracy metrics, applications & future scope"}}
+    {{"slide": "Slide 1: Title & Team", "points": "Project Title, Subject ({subject}), USN & Guide"}},
+    {{"slide": "Slide 2: Problem Statement", "points": "Existing limitations & engineering need"}},
+    {{"slide": "Slide 3: System Design", "points": "Architecture / Circuit schematic & working"}},
+    {{"slide": "Slide 4: Implementation", "points": "Code / Breadboard prototype & testing"}},
+    {{"slide": "Slide 5: Results & Future Scope", "points": "Performance metrics, applications & conclusion"}}
   ],
-  "working_principle": "Detailed 320-word step-by-step explanation of system architecture, data flow, and execution.",
-  "primary_code_language": "Python 3 (AI / Application Code)",
-  "primary_code": "Complete runnable Python or primary language source code (60-90 lines).",
+  "working_principle": "Detailed 380-word step-by-step technical working explanation grounded in {subject}.",
+  "primary_code_language": "Python 3 / C++",
+  "primary_code": "Complete 75-95 line runnable code.",
   "has_arduino_hardware": true,
-  "arduino_code": "Complete Arduino C++ (.ino) firmware code for hardware/sensor interfacing.",
-  "results_and_discussion": "Detailed 180-word analysis of testing parameters, accuracy, and performance.",
-  "advantages": ["Advantage 1", "Advantage 2", "Advantage 3"],
-  "applications": ["Application 1", "Application 2", "Application 3"],
-  "future_scope": "120-word discussion on scalability and future upgrades.",
+  "arduino_code": "Complete Arduino (.ino) sketch if applicable.",
+  "results_and_discussion": "Detailed 220-word analysis of testing parameters, accuracy, and observations.",
+  "advantages": ["Advantage 1", "Advantage 2", "Advantage 3", "Advantage 4"],
+  "applications": ["Application 1", "Application 2", "Application 3", "Application 4"],
+  "future_scope": "160-word discussion on scalability and future upgrades.",
   "references": [
-    "[1] IEEE Standard / Research Paper 1",
-    "[2] Reference Book / Documentation 2",
-    "[3] IEEE / Springer Journal Article 3 (2025)"
+    "[1] IEEE Standard Technical Reference (2025).",
+    "[2] Standard Textbook on {subject}, Pearson / McGraw Hill.",
+    "[3] VTU Academic Curriculum & Project Guidelines (2025-26)."
   ],
   "viva_qa": [
     {{
@@ -117,84 +130,77 @@ Return ONLY valid JSON matching this exact schema (no markdown fences):
         except Exception as e:
             print("Gemini API fallback:", e)
 
-    return _fallback_blueprint(topic, branch, level)
+    return _fallback_blueprint(topic, branch, subject, level)
 
 
-def _fallback_blueprint(topic, branch, level):
-    clean_title = topic.strip().title() or "Smart Automated Engineering System"
-    low = clean_title.lower()
-    is_ai = any(k in low for k in ["ai", "cnn", "detection", "machine learning", "deep learning", "python", "fake", "disease", "image"])
+def _fallback_blueprint(topic, branch, subject, level):
+    clean_title = topic.strip().title() or f"Smart {subject} System"
+    low = (clean_title + " " + subject + " " + branch).lower()
 
-    if is_ai:
+    # Determine if project requires physical circuit simulation
+    pure_software_keywords = ["website", "web app", "database", "dbms", "sql", "management system", "chatbot", "nlp", "data science", "cloud", "blockchain", "cybersecurity", "android app", "software"]
+    hardware_keywords = ["opamp", "op-amp", "ic", "arduino", "esp32", "sensor", "iot", "motor", "servo", "relay", "water level", "gate", "robot", "embedded", "vlsi", "ece", "eee", "circuit", "analog", "digital", "555"]
+
+    has_hw = any(k in low for k in hardware_keywords)
+    is_pure_sw = any(k in low for k in pure_software_keywords) and not has_hw
+    requires_circuit = not is_pure_sw
+
+    is_opamp = "opamp" in low or "op-amp" in low or "analog" in low or "water level" in low
+
+    if is_opamp:
+        controller_name = "9V DC Regulated Supply (Analog)"
         parts = [
-            {"type": "camera_module", "label": "OV7670 / USB Vision Cam", "pin_from": "ESP32 GPIO 21", "pin_to": "Breadboard Row 08", "wire_color": "#38bdf8"},
-            {"type": "oled_display", "label": "0.96 I2C OLED Status", "pin_from": "GPIO 22 (SCL)", "pin_to": "Breadboard Row 22", "wire_color": "#a855f7"},
-            {"type": "buzzer_alarm", "label": "Alert Buzzer & LED", "pin_from": "GPIO 18 (OUT)", "pin_to": "Breadboard Row 35", "wire_color": "#f59e0b"}
+            {"type": "ic_opamp", "label": "LM324 Quad Op-Amp IC", "pin_from": "Pin 4 (+9V) / Pin 11 (GND)", "pin_to": "Breadboard Center DIP", "wire_color": "#38bdf8"},
+            {"type": "sensor_water_probes", "label": "Water Tank Level Probes", "pin_from": "Low/Mid/Full Probes", "pin_to": "Op-Amp Non-Inv Pins (3,5,10)", "wire_color": "#22c55e"},
+            {"type": "led_bar", "label": "3-Stage LED & Piezo Buzzer", "pin_from": "Op-Amp Output Pins (1,7,8)", "pin_to": "Breadboard Row 28", "wire_color": "#f59e0b"}
         ]
-        prim_lang = "Python 3 (OpenCV & CNN Inference)"
+        pins = [
+            {"from_pin": "LM324 Pin 3, 5, 10 (+IN)", "to_pin": "Water Level Sensor Probes", "signal": "Analog Sense Voltage"},
+            {"from_pin": "LM324 Pin 2, 6, 9 (-IN)", "to_pin": "10kΩ Reference Potentiometer", "signal": "V_ref Threshold"},
+            {"from_pin": "LM324 Pin 1, 7, 8 (OUT)", "to_pin": "Green/Yellow/Red LEDs + Piezo", "signal": "Comparator Output"},
+            {"from_pin": "9V DC Battery / Supply", "to_pin": "Breadboard +VCC & -GND Rails", "signal": "9V Regulated DC"}
+        ]
+        prim_lang = "Python 3 (Op-Amp Comparator Voltage Simulator)"
         prim_code = f"""# ============================================================================
 # Project: {clean_title}
-# Branch : {branch} | Level: {level}
+# Subject: {subject} ({branch})
+# Op-Amp Comparator Threshold Simulation
 # ============================================================================
 
-import cv2
-import numpy as np
-import time
+V_SUPPLY = 9.0
+V_REF_LOW = 2.2
+V_REF_MID = 4.5
+V_REF_FULL = 7.2
 
-CONFIDENCE_THRESHOLD = 0.82
-CLASSES = ["Healthy / Normal", "Anomaly / Alert Detected"]
-
-def preprocess_frame(frame):
-    resized = cv2.resize(frame, (224, 224))
-    normalized = resized.astype("float32") / 255.0
-    return np.expand_dims(normalized, axis=0)
-
-def run_inference(tensor):
-    # Simulated CNN feature activation score
-    mean_intensity = float(np.mean(tensor))
-    score = min(0.98, max(0.45, mean_intensity * 1.45))
-    label = CLASSES[1] if score >= CONFIDENCE_THRESHOLD else CLASSES[0]
-    return label, round(score * 100, 2)
-
-def main():
-    print("==================================================")
-    print("INITIALIZING: {clean_title}")
-    print("==================================================")
-    sample_input = np.random.rand(480, 640, 3) * 255
-    tensor = preprocess_frame(sample_input)
-    prediction, confidence = run_inference(tensor)
-    print(f"[RESULT] Prediction: {{prediction}} | Confidence: {{confidence}}%")
+def evaluate_opamp_comparators(probe_voltage):
+    low_led = "ON" if probe_voltage >= V_REF_LOW else "OFF"
+    mid_led = "ON" if probe_voltage >= V_REF_MID else "OFF"
+    full_led = "ON" if probe_voltage >= V_REF_FULL else "OFF"
+    buzzer = "ACTIVE_BEEP" if probe_voltage >= V_REF_FULL else "SILENT"
+    print(f"Probe={{probe_voltage:.1f}}V -> LOW:{{low_led}} | MID:{{mid_led}} | FULL:{{full_led}} | Buzzer:{{buzzer}}")
 
 if __name__ == "__main__":
-    main()
+    print("=== {clean_title} Simulation ===")
+    for v in [0.5, 2.6, 5.1, 7.8]:
+        evaluate_opamp_comparators(v)
 """
-    else:
+    elif requires_circuit:
+        controller_name = "Arduino Uno R3"
         parts = [
-            {"type": "sensor_gas" if "gas" in low or "fire" in low or "alcohol" in low else "sensor_ir", "label": "Primary Sensor Module", "pin_from": "Arduino D2 / A0", "pin_to": "Breadboard Row 10", "wire_color": "#38bdf8"},
-            {"type": "motor_servo" if "gate" in low or "railway" in low or "door" in low else "relay_module", "label": "Servo / Relay Actuator", "pin_from": "Arduino PWM D9", "pin_to": "Breadboard Row 24", "wire_color": "#f59e0b"},
-            {"type": "oled_display", "label": "128x64 I2C OLED Display", "pin_from": "Arduino A4/A5", "pin_to": "Breadboard Row 38", "wire_color": "#a855f7"}
+            {"type": "sensor_ultrasonic", "label": "Ultrasonic / IR Sensor", "pin_from": "Arduino D2 / D3", "pin_to": "Breadboard Row 10", "wire_color": "#38bdf8"},
+            {"type": "motor_servo", "label": "SG90 Servo / Relay Unit", "pin_from": "Arduino PWM D9", "pin_to": "Breadboard Row 22", "wire_color": "#f59e0b"},
+            {"type": "piezo_buzzer", "label": "Piezo Buzzer & Status LED", "pin_from": "Arduino D8", "pin_to": "Breadboard Row 34", "wire_color": "#ef4444"}
         ]
-        prim_lang = "Python 3 (Serial Telemetry & Dashboard)"
-        prim_code = f"""# ============================================================================
-# Project: {clean_title} — Python Telemetry Monitor
-# ============================================================================
-import time
-
-THRESHOLD = 520
-
-def process_reading(val):
-    status = "ALERT_TRIGGERED" if val > THRESHOLD else "SAFE_NORMAL"
-    print(f"[TELEMETRY] Sensor={{val}} | Status={{status}}")
-
-if __name__ == "__main__":
-    for sample in [310, 420, 615, 290]:
-        process_reading(sample)
-        time.sleep(0.3)
-"""
-
-    arduino_code = f"""// ============================================================================
-// Optional Hardware Firmware (.ino) for: {clean_title}
-// Board: Arduino Uno R3 / ESP32
+        pins = [
+            {"from_pin": "Arduino Digital D2/D3", "to_pin": "Sensor Trig/Echo (Row 10)", "signal": "5V TTL Digital"},
+            {"from_pin": "Arduino PWM Pin D9", "to_pin": "Actuator Control (Row 22)", "signal": "50Hz PWM Signal"},
+            {"from_pin": "Arduino Digital D8", "to_pin": "Piezo Buzzer + LED (Row 34)", "signal": "Alert Output"},
+            {"from_pin": "Arduino 5V & GND", "to_pin": "Breadboard + / - Rails", "signal": "5V DC Power"}
+        ]
+        prim_lang = "Arduino C++ (.ino) & Python Telemetry"
+        prim_code = f"""// ============================================================================
+// Project: {clean_title}
+// Subject: {subject} ({branch})
 // ============================================================================
 
 #define SENSOR_PIN 2
@@ -206,144 +212,168 @@ void setup() {{
   pinMode(SENSOR_PIN, INPUT);
   pinMode(ACTUATOR_PIN, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
-  Serial.println("HARDWARE READY: {clean_title}");
+  Serial.println("READY: {clean_title}");
 }}
 
 void loop() {{
-  int state = digitalRead(SENSOR_PIN);
-  if (state == HIGH) {{
+  if (digitalRead(SENSOR_PIN) == HIGH) {{
     digitalWrite(ACTUATOR_PIN, HIGH);
     digitalWrite(BUZZER_PIN, HIGH);
-    Serial.println("[TRIGGER] Hardware Actuator ON");
   }} else {{
     digitalWrite(ACTUATOR_PIN, LOW);
     digitalWrite(BUZZER_PIN, LOW);
-    Serial.println("[NORMAL] Monitoring...");
   }}
   delay(200);
 }}
 """
+    else:
+        controller_name = "Software-Only Architecture"
+        parts = []
+        pins = []
+        prim_lang = f"Python 3 ({subject} Application)"
+        prim_code = f"""# ============================================================================
+# Project: {clean_title}
+# Branch : {branch} | Subject: {subject}
+# Pure Software Implementation (No External Hardware Circuit Required)
+# ============================================================================
+
+from datetime import datetime
+
+class ProjectEngine:
+    def __init__(self, module_name):
+        self.module_name = module_name
+        self.records = []
+
+    def process_transaction(self, user_id, payload):
+        entry = {{
+            "id": len(self.records) + 1,
+            "user": user_id,
+            "data": payload,
+            "timestamp": datetime.now().isoformat(),
+            "status": "VERIFIED"
+        }}
+        self.records.append(entry)
+        return entry
+
+if __name__ == "__main__":
+    engine = ProjectEngine("{clean_title}")
+    print(engine.process_transaction("USR_101", {{"subject": "{subject}", "score": 96.4}}))
+"""
 
     return {
         "title": clean_title,
-        "tagline": f"An intelligent {branch} engineering solution for {level} academic implementation.",
+        "tagline": f"Subject-aligned {subject} engineering project for {branch} ({level}).",
+        "requires_circuit": requires_circuit,
+        "controller_or_supply": controller_name,
         "abstract": (
-            f"This project presents the design, simulation, and prototype implementation of '{clean_title}' "
-            f"tailored for {branch} engineering applications. Conventional systems suffer from manual latency, "
-            "high operational overhead, and lack of real-time telemetry. To overcome these limitations, the proposed "
-            "architecture integrates precision sensing, algorithmic/AI processing, and automated actuation. "
-            "Experimental validation confirms a 94.8% operational accuracy with sub-200ms response latency."
+            f"This project presents the design, analysis, and implementation of '{clean_title}' grounded in the core principles "
+            f"of {subject} under {branch}. Existing conventional approaches suffer from manual latency, poor scalability, and "
+            "lack of automated real-time feedback. By applying systematic engineering design methodologies taught in "
+            f"{subject}, the proposed system achieves high reliability, low operational cost, and 95.2% functional accuracy."
         ),
         "problem_statement": (
-            f"Existing manual approaches related to {clean_title} require continuous human supervision, "
-            "are prone to human error, and lack automated fault alerts."
+            f"Conventional methods used in {clean_title} rely heavily on manual monitoring and outdated architectures, "
+            "leading to delayed response times and human errors. There is a strong need for an automated, accurate, "
+            f"and cost-effective solution leveraging {subject} concepts."
         ),
         "objectives": [
-            f"To design a modular architecture for {clean_title}.",
-            "To minimize latency and hardware cost while maximizing accuracy.",
-            "To implement real-time detection and automated alert/control mechanisms.",
-            "To validate performance across multiple test scenarios."
+            f"To apply core {subject} concepts to design '{clean_title}'.",
+            "To eliminate manual intervention through automated real-time processing.",
+            "To optimize response latency, accuracy, and overall system reliability.",
+            "To validate system performance across boundary and stress test cases.",
+            "To prepare complete VTU-compliant technical documentation."
         ],
         "literature_survey": [
-            {"paper": "R. Kumar et al. (2024) - IEEE Access", "summary": "Proposed baseline monitoring; lacked real-time edge optimization."},
-            {"paper": "S. Kulkarni & P. Rao (2025) - Springer", "summary": "Demonstrated sensor/AI fusion; high BOM cost limited student prototyping."},
-            {"paper": "A. Sharma et al. (2026) - Elsevier", "summary": "Introduced automated analytics; our work simplifies deployment."}
+            {"paper": "R. Kumar et al. (2024) - IEEE Access", "summary": f"Explored foundational {subject} techniques; lacked cost optimization."},
+            {"paper": "S. Kulkarni & P. Rao (2025) - Springer", "summary": "Demonstrated prototype validation; higher complexity for student deployment."},
+            {"paper": "A. Sharma et al. (2026) - Elsevier", "summary": "Introduced modern automation; our implementation improves efficiency and clarity."}
         ],
         "hardware_requirements": [
-            {"name": "Arduino Uno R3 / ESP32 DevKit", "spec": "Main Microcontroller Unit", "cost_inr": 480},
-            {"name": parts[0]["label"], "spec": "Primary Input Module", "cost_inr": 280},
-            {"name": parts[1]["label"], "spec": "Output / Control Module", "cost_inr": 220},
-            {"name": "830-Point Breadboard & Jumpers", "spec": "Solderless Prototyping Board", "cost_inr": 140}
+            {"name": controller_name, "spec": "Primary Processing / Power Unit", "cost_inr": 350},
+            {"name": parts[0]["label"] if parts else "Cloud / Local Server", "spec": "Primary Input Subsystem", "cost_inr": 220},
+            {"name": parts[1]["label"] if len(parts) > 1 else "Database Engine", "spec": "Core Logic / Actuation", "cost_inr": 190},
+            {"name": "830-Point Breadboard & Jumpers" if requires_circuit else "Development Workstation", "spec": "Prototyping Environment", "cost_inr": 140}
         ],
         "software_requirements": [
-            "OS: Windows 11 / Ubuntu Linux",
-            "IDE: VS Code / Python 3.11 / Arduino IDE 2.3",
-            "Libraries: OpenCV / NumPy / Wire.h"
+            "Operating System: Windows 11 / Ubuntu 22.04 LTS",
+            f"Subject Tools: Python 3.11 / MATLAB / Multisim / VS Code ({subject})",
+            "Documentation: MS Word / LaTeX VTU Format"
         ],
-        "controller_board": "Arduino Uno R3 / ESP32",
         "circuit_3d_parts": parts,
-        "pin_connections": [
-            {"from_pin": parts[0]["pin_from"], "to_pin": f"{parts[0]['label']} ({parts[0]['pin_to']})", "signal": "Input Signal"},
-            {"from_pin": parts[1]["pin_from"], "to_pin": f"{parts[1]['label']} ({parts[1]['pin_to']})", "signal": "Control Output"},
-            {"from_pin": "Controller 5V", "to_pin": "Breadboard +VCC Red Rail", "signal": "+5V DC Power"},
-            {"from_pin": "Controller GND", "to_pin": "Breadboard -GND Blue Rail", "signal": "Common Ground"}
+        "software_architecture_nodes": [
+            "Input Layer & Data Capture",
+            "Validation & Pre-Processing",
+            f"Core {subject} Processing Engine",
+            "Storage & Analytics Layer",
+            "Interactive Output & Reporting"
         ],
+        "pin_connections": pins,
         "ppt_slides": [
-            {"slide": "Slide 1: Title & Team", "points": f"{clean_title} — Team USN & Guide"},
-            {"slide": "Slide 2: Problem Statement", "points": "Drawbacks of existing manual systems"},
-            {"slide": "Slide 3: System Architecture", "points": "3D Hardware layout, software pipeline & interfacing"},
-            {"slide": "Slide 4: Implementation", "points": "Core algorithm/code & breadboard circuit testing"},
-            {"slide": "Slide 5: Results & Future Scope", "points": "94.8% accuracy, applications & scalability"}
+            {"slide": "Slide 1: Title & Team", "points": f"{clean_title} — {subject} ({branch})"},
+            {"slide": "Slide 2: Problem Statement", "points": "Limitations of existing approaches & project motivation"},
+            {"slide": "Slide 3: Proposed Design", "points": "Architecture / Circuit schematic & component selection"},
+            {"slide": "Slide 4: Implementation", "points": "Working methodology, code/breadboard setup & testing"},
+            {"slide": "Slide 5: Results & Conclusion", "points": "Experimental accuracy (95.2%), applications & future scope"}
         ],
         "working_principle": (
-            f"The working of '{clean_title}' operates in three synchronized stages: Data Acquisition, "
-            "Intelligent Processing, and Automated Output Control. Input signals are captured, filtered against "
-            "noise, evaluated by the core algorithm/controller, and converted into real-time alerts or actuation."
+            f"The architecture of '{clean_title}' is structured around core {subject} principles. In Stage 1, input signals/data "
+            "are acquired and conditioned to remove noise or invalid entries. In Stage 2, the core comparator/algorithm evaluates "
+            "the conditioned inputs against calibrated reference thresholds. In Stage 3, deterministic output actions (visual LEDs, "
+            "audio alerts, or dashboard updates) are triggered immediately with sub-200ms latency."
         ),
         "primary_code_language": prim_lang,
         "primary_code": prim_code,
-        "has_arduino_hardware": True,
-        "arduino_code": arduino_code,
+        "has_arduino_hardware": requires_circuit,
+        "arduino_code": f"// Hardware Firmware for {clean_title}\nvoid setup() {{ Serial.begin(115200); }}\nvoid loop() {{ Serial.println(\"Running {clean_title}\"); delay(500); }}",
         "results_and_discussion": (
-            "The system was tested across 50 operational trials, achieving 94.8% accuracy with sub-200ms response time."
+            f"Comprehensive testing was conducted under {subject} lab conditions across 50 trials. The system demonstrated "
+            "consistent threshold stability, zero false alarms, and 95.2% overall accuracy."
         ),
         "advantages": [
-            "High accuracy and fast response time (< 200 ms)",
-            "Low prototype cost and modular design",
-            "Easy to test on 830-point solderless breadboard"
+            f"Directly demonstrates practical {subject} engineering principles",
+            "High reliability and sub-200ms response latency",
+            "Low implementation cost and modular architecture",
+            "Easy to test, debug, and demonstrate in lab vivas"
         ],
         "applications": [
-            "Smart Campus & Lab Automation",
-            "Industrial Monitoring & Safety",
-            "Academic Mini & Major Projects"
+            "Industrial & Commercial Automation",
+            "Smart Campus & Residential Safety Systems",
+            f"{subject} Laboratory Demonstrations",
+            "Scalable Enterprise & IoT Deployments"
         ],
-        "future_scope": "Can be scaled with cloud dashboards, mobile alerts, and custom PCB fabrication.",
+        "future_scope": "Can be extended with cloud telemetry, mobile app alerts, and PCB miniaturization.",
         "references": [
-            "[1] IEEE Standard Technical Documentation (2025).",
-            "[2] Muhammad Ali Mazidi, 'Embedded Systems & Architecture', Pearson.",
-            "[3] VTU Academic Project Guidelines (2025-26)."
+            f"[1] IEEE Standard Reference on {subject} Systems (2025).",
+            f"[2] Standard University Textbook on {subject}, Pearson Education.",
+            "[3] VTU Academic Project Report Guidelines (2025-26)."
         ],
         "viva_qa": [
             {
-                "en": {"q": "What is the main objective of your project?", "a": f"To automate and optimize {clean_title} with high accuracy and low cost."},
-                "kn": {"q": "ನಿಮ್ಮ ಪ್ರಾಜೆಕ್ಟ್‌ನ ಮುಖ್ಯ ಉದ್ದೇಶವೇನು?", "a": f"{clean_title} ಅನ್ನು ಕಡಿಮೆ ವೆಚ್ಚದಲ್ಲಿ ಮತ್ತು ಹೆಚ್ಚಿನ ನಿಖರತೆಯೊಂದಿಗೆ ಸ್ವಯಂಚಾಲಿತಗೊಳಿಸುವುದು."},
-                "hi": {"q": "आपके प्रोजेक्ट का मुख्य उद्देश्य क्या है?", "a": f"{clean_title} को कम लागत और उच्च सटीकता के साथ स्वचालित करना।"},
-                "te": {"q": "మీ ప్రాజెక్ట్ యొక్క ముఖ్య ఉద్దేశ్యం ఏమిటి?", "a": f"{clean_title} ని తక్కువ ఖర్చుతో మరియు అధిక ఖచ్చితత్వంతో ఆటోమేట్ చేయడం."},
-                "ta": {"q": "உங்கள் திட்டத்தின் முக்கிய நோக்கம் என்ன?", "a": f"{clean_title} ஐ குறைந்த செலவில் மற்றும் அதிக துல்லியத்துடன் தானியக்கமாக்குவது."}
+                "en": {"q": f"How does this project apply {subject} concepts?", "a": f"It directly implements core {subject} principles for signal/data processing and threshold decision-making."},
+                "kn": {"q": f"ಈ ಪ್ರಾಜೆಕ್ಟ್ {subject} ತತ್ವಗಳನ್ನು ಹೇಗೆ ಬಳಸುತ್ತದೆ?", "a": f"ಇದು ಸಿಗ್ನಲ್/ಡೇಟಾ ಸಂಸ್ಕರಣೆ ಮತ್ತು ನಿರ್ಧಾರ ತೆಗೆದುಕೊಳ್ಳಲು {subject} ತತ್ವಗಳನ್ನು ನೇರವಾಗಿ ಬಳಸುತ್ತದೆ."},
+                "hi": {"q": f"यह प्रोजेक्ट {subject} के सिद्धांतों को कैसे लागू करता है?", "a": f"यह सिग्नल/डेटा प्रोसेसिंग और निर्णय लेने के लिए {subject} के सिद्धांतों का उपयोग करता है।"},
+                "te": {"q": f"ఈ ప్రాజెక్ట్ {subject} సూత్రాలను ఎలా ఉపయోగిస్తుంది?", "a": f"ఇది సిగ్నల్/డేటా ప్రాసెసింగ్ మరియు నిర్ణయం తీసుకోవడానికి {subject} సూత్రాలను ఉపయోగిస్తుంది."},
+                "ta": {"q": f"இந்த திட்டம் {subject} கோட்பாடுகளை எவ்வாறு பயன்படுத்துகிறது?", "a": f"இது சிக்னல்/தரவு செயலாக்கம் மற்றும் முடிவெடுப்பதற்கு {subject} கோட்பாடுகளைப் பயன்படுத்துகிறது."}
             },
             {
-                "en": {"q": "Why is a breadboard used in hardware prototyping?", "a": "It allows solderless circuit assembly, quick testing, and easy pin debugging."},
-                "kn": {"q": "ಹಾರ್ಡ್‌ವೇರ್ ಪ್ರೊಟೊಟೈಪಿಂಗ್‌ನಲ್ಲಿ ಬ್ರೆಡ್‌ಬೋರ್ಡ್ ಏಕೆ ಬಳಸುತ್ತೇವೆ?", "a": "ಸೋಲ್ಡರಿಂಗ್ ಇಲ್ಲದೆ ಸುಲಭವಾಗಿ ಕನೆಕ್ಷನ್ ಬದಲಾಯಿಸಲು ಮತ್ತು ಪರೀಕ್ಷಿಸಲು ಬಳಸುತ್ತೇವೆ."},
-                "hi": {"q": "हार्डवेयर प्रोटोटाइपिंग में ब्रेडबोर्ड का उपयोग क्यों किया जाता है?", "a": "यह बिना सोल्डरिंग के आसान सर्किट कनेक्शन और टेस्टिंग की सुविधा देता है।"},
-                "te": {"q": "హార్డ్‌వేర్ ప్రోటోటైపింగ్‌లో బ్రెడ్‌బోర్డ్ ఎందుకు ఉపయోగిస్తారు?", "a": "సోల్డరింగ్ లేకుండా సులభంగా సర్క్యూట్ కనెక్షన్లు మరియు టెస్టింగ్ చేయడానికి ఉపయోగిస్తారు."},
-                "ta": {"q": "வன்பொருள் முன்மாதிரியில் பிரெட்போர்டு ஏன் பயன்படுத்தப்படுகிறது?", "a": "சாலிடரிங் இல்லாமல் எளிதாக சர்க்யூட் இணைப்புகளை மாற்றவும் சோதிக்கவும் இது உதவுகிறது."}
+                "en": {"q": "What is the main advantage of your proposed design?", "a": "High accuracy (95.2%), low cost, and fast real-time response under 200 ms."},
+                "kn": {"q": "ನಿಮ್ಮ ವಿನ್ಯಾಸದ ಮುಖ್ಯ ಪ್ರಯೋಜನವೇನು?", "a": "ಹೆಚ್ಚಿನ ನಿಖರತೆ (95.2%), ಕಡಿಮೆ ವೆಚ್ಚ ಮತ್ತು 200 ms ಗಿಂತ ವೇಗವಾದ ಪ್ರತಿಕ್ರಿಯೆ."},
+                "hi": {"q": "आपके डिज़ाइन का मुख्य लाभ क्या है?", "a": "उच्च सटीकता (95.2%), कम लागत और 200 ms से कम का तेज़ रिस्पॉन्स।"},
+                "te": {"q": "మీ డిజైన్ యొక్క ప్రధాన ప్రయోజనం ఏమిటి?", "a": "అధిక ఖచ్చితత్వం (95.2%), తక్కువ ఖర్చు మరియు 200 ms కంటే వేగవంతమైన స్పందన."},
+                "ta": {"q": "உங்கள் வடிவமைப்பின் முக்கிய நன்மை என்ன?", "a": "அதிக துல்லியம் (95.2%), குறைந்த செலவு மற்றும் 200 ms க்கும் குறைவான வேகமான பதில்."}
             },
             {
-                "en": {"q": "How do you improve accuracy and reduce false triggers?", "a": "By applying threshold filtering and signal normalization before decision logic."},
-                "kn": {"q": "ನಿಖರತೆಯನ್ನು ಹೆಚ್ಚಿಸಲು ಮತ್ತು ತಪ್ಪು ಟ್ರಿಗರ್ ತಡೆಯಲು ಏನು ಮಾಡಿದ್ದೀರಿ?", "a": "ನಿರ್ಧಾರ ತೆಗೆದುಕೊಳ್ಳುವ ಮುನ್ನ ಫಿಲ್ಟರಿಂಗ್ ಮತ್ತು ಥ್ರೆಶೋಲ್ಡ್ ಪರಿಶೀಲನೆ ಬಳಸಲಾಗಿದೆ."},
-                "hi": {"q": "सटीकता बढ़ाने और गलत ट्रिगर कम करने के लिए आप क्या करते हैं?", "a": "निर्णय लेने से पहले सिग्नल फ़िल्टरिंग और थ्रेशोल्ड जांच का उपयोग किया जाता है।"},
-                "te": {"q": "ఖచ్చితత్వాన్ని పెంచడానికి మరియు తప్పుడు ట్రిగ్గర్‌లను తగ్గించడానికి మీరు ఏమి చేస్తారు?", "a": "నిర్ణయం తీసుకునే ముందు సిగ్నల్ ఫిల్టరింగ్ మరియు థ్రెషోల్డ్ తనిఖీని ఉపయోగిస్తాము."},
-                "ta": {"q": "துல்லியத்தை அதிகரிக்கவும் தவறான தூண்டுதல்களைக் குறைக்கவும் என்ன செய்கிறீர்கள்?", "a": "முடிவெடுப்பதற்கு முன் சிக்னல் வடிகட்டுதல் மற்றும் வரம்பு சரிபார்ப்பு பயன்படுத்தப்படுகிறது."}
-            },
-            {
-                "en": {"q": "What is the response time and estimated budget of your system?", "a": "Response time is under 200 ms and total prototype cost is around Rs. 1,120."},
-                "kn": {"q": "ನಿಮ್ಮ ಸಿಸ್ಟಮ್‌ನ ರೆಸ್ಪಾನ್ಸ್ ಸಮಯ ಮತ್ತು ಒಟ್ಟು ವೆಚ್ಚ ಎಷ್ಟು?", "a": "ರೆಸ್ಪಾನ್ಸ್ ಸಮಯ 200 ms ಗಿಂತ ಕಡಿಮೆ ಇದ್ದು, ಒಟ್ಟು ವೆಚ್ಚ ಸುಮಾರು ₹1,120 ಆಗುತ್ತದೆ."},
-                "hi": {"q": "आपके सिस्टम का रिस्पॉन्स टाइम और कुल बजट क्या है?", "a": "रिस्पॉन्स टाइम 200 ms से कम है और कुल लागत लगभग ₹1,120 है।"},
-                "te": {"q": "మీ సిస్టమ్ యొక్క రెస్పాన్స్ సమయం మరియు మొత్తం బడ్జెట్ ఎంత?", "a": "రెస్పాన్స్ సమయం 200 ms కంటే తక్కువగా ఉంటుంది మరియు మొత్తం ఖర్చు సుమಾರು ₹1,120."},
-                "ta": {"q": "உங்கள் அமைப்பின் பதில் நேரம் மற்றும் மொத்த செலவு என்ன?", "a": "பதில் நேரம் 200 ms க்கும் குறைவாக உள்ளது மற்றும் மொத்த செலவு சுமார் ₹1,120 ஆகும்."}
-            },
-            {
-                "en": {"q": "How can this project be scaled for real-world deployment?", "a": "By integrating cloud IoT dashboards, mobile alerts, and custom PCB hardware."},
-                "kn": {"q": "ಇದನ್ನು ನೈಜ-ಪ್ರಪಂಚದ ಬಳಕೆಗೆ ಹೇಗೆ ವಿಸ್ತರಿಸಬಹುದು?", "a": "ಕ್ಲೌಡ್ IoT ಡ್ಯಾಶ್‌ಬೋರ್ಡ್, ಮೊಬೈಲ್ ಅಲರ್ಟ್ ಮತ್ತು ಕಸ್ಟಮ್ PCB ಬಳಸುವ ಮೂಲಕ ವಿಸ್ತರಿಸಬಹುದು."},
-                "hi": {"q": "इसे वास्तविक दुनिया में उपयोग के लिए कैसे बढ़ाया जा सकता है?", "a": "क्लाउड IoT डैशबोर्ड, मोबाइल अलर्ट और कस्टम PCB जोड़कर इसे बढ़ाया जा सकता है।"},
-                "te": {"q": "దీనిని వాస్తవ ప్రపంచ వినియోగానికి ఎలా విస్తరించవచ్చు?", "a": "క్లౌడ్ IoT డాష్‌బోర్డ్, మొబైల్ అలర్ట్‌లు మరియు కస్టమ్ PCB జోడించడం ద్వారా విస్తరించవచ్చు."},
-                "ta": {"q": "நடைமுறை பயன்பாட்டிற்கு இதை எவ்வாறு விரிவுபடுத்தலாம்?", "a": "கிளவுட் IoT டாஷ்போர்டு, மொபைல் எச்சரிக்கைகள் மற்றும் தனிப்பயன் PCB மூலம் விரிவுபடுத்தலாம்."}
+                "en": {"q": "How did you verify and test your prototype?", "a": "By running 50 repeated test cases and measuring output stability against reference thresholds."},
+                "kn": {"q": "ನಿಮ್ಮ ಮಾದರಿಯನ್ನು ನೀವು ಹೇಗೆ ಪರೀಕ್ಷಿಸಿದ್ದೀರಿ?", "a": "50 ಬಾರಿ ಪರೀಕ್ಷೆ ನಡೆಸಿ ರೆಫರೆನ್ಸ್ ಥ್ರೆಶೋಲ್ಡ್‌ಗಳೊಂದಿಗೆ ಫಲಿತಾಂಶವನ್ನು ದೃಢಪಡಿಸಲಾಗಿದೆ."},
+                "hi": {"q": "आपने अपने प्रोटोटाइप का परीक्षण कैसे किया?", "a": "50 परीक्षण चलाकर और रेफरेंस थ्रेशोल्ड के साथ आउटपुट की जांच करके।"},
+                "te": {"q": "మీరు మీ ప్రోటోటైప్‌ను ఎలా పరీక్షించారు?", "a": "50 పరీక్షలు నిర్వహించి రిఫరెన్స్ థ్రెషోల్డ్‌లతో అవుట్‌పుట్‌ను సరిపోల్చడం ద్వారా."},
+                "ta": {"q": "உங்கள் முன்மாதிரியை எவ்வாறு சோதித்தீர்கள்?", "a": "50 சோதனைகளை நடத்தி வெளியீட்டு நிலைத்தன்மையை உறுதி செய்தோம்."}
             }
         ]
     }
 
 
-# ==================== 2. CUSTOMIZABLE VTU DOCX REPORT BUILDER ====================
+# ==================== 2. 15+ PAGE VTU DOCX REPORT BUILDER ====================
 def _set_cell_shading(cell, fill_hex):
     shading = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{fill_hex}"/>')
     cell._tc.get_or_add_tcPr().append(shading)
@@ -361,7 +391,7 @@ def _add_page_border(section):
     section._sectPr.append(pgBorders)
 
 
-def build_vtu_docx(blueprint, student_name, usn, college, branch, guide_name, fmt):
+def build_vtu_docx(blueprint, student_name, usn, college, branch, subject, guide_name, fmt):
     doc = Document()
     font_family = fmt.get("font_family", "Times New Roman")
     font_size = int(fmt.get("font_size", 12))
@@ -402,7 +432,7 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, guide_name, fm
     for txt, sz, bld, itl, clr in [
         ("VISVESVARAYA TECHNOLOGICAL UNIVERSITY / AUTONOMOUS\n", font_size + 2, True, False, RGBColor(15, 35, 95)),
         (f"{college.upper()}\nDepartment of {branch}\n\n", font_size + 1, True, False, None),
-        ("A PROJECT REPORT ON\n\n", font_size, False, True, None),
+        (f"A TECHNICAL PROJECT REPORT ON\n({subject.upper()})\n\n", font_size, False, True, None),
         (f'"{title.upper()}"\n\n', font_size + 6, True, False, RGBColor(180, 30, 30)),
         (f"Submitted in partial fulfillment of the requirements for the award of the degree of\nBACHELOR OF ENGINEERING IN {branch.upper()}\n\nSubmitted By:\n", font_size, False, False, None),
         (f"{student_name.upper()}   (USN: {usn.upper()})\n\n", font_size + 1, True, False, None),
@@ -419,12 +449,12 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, guide_name, fm
             r.font.color.rgb = clr
     doc.add_page_break()
 
-    # PAGE 2: CERTIFICATE
+    # PAGE 2: BONAFIDE CERTIFICATE
     add_h(f"{college.upper()}", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
     add_h(f"Department of {branch}", 2).alignment = WD_ALIGN_PARAGRAPH.CENTER
     add_h("BONAFIDE CERTIFICATE", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
     add_b(
-        f'Certified that the Project work entitled "{title}" is a bonafide work carried out by '
+        f'Certified that the Project work entitled "{title}" under the subject {subject} is a bonafide work carried out by '
         f"{student_name} (USN: {usn}), a bonafide student of {college}, in partial fulfillment for the award "
         f"of Bachelor of Engineering in {branch} during the academic year {year_str}."
     )
@@ -441,17 +471,32 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, guide_name, fm
         sig_table.cell(1, i).text = n
     doc.add_page_break()
 
-    # PAGE 3: ABSTRACT & TOC
+    # PAGE 3: DECLARATION & ACKNOWLEDGEMENT
+    add_h("DECLARATION", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    add_b(
+        f'I, {student_name} (USN: {usn}), student of {branch}, {college}, hereby declare that the Project '
+        f'entitled "{title}" has been independently carried out by me under the supervision of Prof. {guide_name}.'
+    )
+    add_b(f"\nPlace: Karnataka\nDate: {datetime.now().strftime('%d-%m-%Y')}                                   Signature: ({student_name})", bold=True)
+    add_h("ACKNOWLEDGEMENT", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    add_b(
+        f"I express my sincere gratitude to my guide Prof. {guide_name}, HOD, Principal, and faculty of {college} "
+        f"for their continuous guidance and laboratory support in {subject} throughout this project."
+    )
+    doc.add_page_break()
+
+    # PAGE 4: ABSTRACT & TOC
     add_h("ABSTRACT", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
     add_b(blueprint.get("abstract", ""))
     add_h("TABLE OF CONTENTS", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
     toc_items = [
-        ("1.", "CHAPTER 1: INTRODUCTION & LITERATURE SURVEY", "04"),
-        ("2.", "CHAPTER 2: HARDWARE ARCHITECTURE & PIN MAPPING", "06"),
-        ("3.", "CHAPTER 3: BILL OF MATERIALS & SOFTWARE STACK", "08"),
-        ("4.", "CHAPTER 4: METHODOLOGY & SOURCE CODE", "10"),
-        ("5.", "CHAPTER 5: RESULTS, APPLICATIONS & REFERENCES", "13"),
-        ("6.", "APPENDIX-A: VIVA-VOCE QUESTIONS & ANSWERS", "15"),
+        ("1.", "CHAPTER 1: INTRODUCTION & PROBLEM DEFINITION", "05"),
+        ("2.", "CHAPTER 2: LITERATURE SURVEY", "07"),
+        ("3.", "CHAPTER 3: SYSTEM DESIGN & CIRCUIT / ARCHITECTURE", "09"),
+        ("4.", "CHAPTER 4: REQUIREMENTS & BILL OF MATERIALS", "11"),
+        ("5.", "CHAPTER 5: METHODOLOGY & IMPLEMENTATION CODE", "12"),
+        ("6.", "CHAPTER 6: RESULTS, APPLICATIONS & REFERENCES", "14"),
+        ("7.", "APPENDIX-A: VIVA-VOCE QUESTIONS & ANSWERS", "16"),
     ]
     toc_tbl = doc.add_table(rows=len(toc_items) + 1, cols=3)
     toc_tbl.style = "Table Grid"
@@ -467,27 +512,43 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, guide_name, fm
         toc_tbl.cell(r_idx, 2).text = pg
     doc.add_page_break()
 
-    # CHAPTER 1
-    add_h("CHAPTER 1: INTRODUCTION & LITERATURE SURVEY", 1)
-    add_h("1.1 Problem Statement", 2)
+    # CHAPTER 1: INTRODUCTION
+    add_h("CHAPTER 1: INTRODUCTION & PROBLEM DEFINITION", 1)
+    add_h("1.1 Overview", 2)
+    add_b(blueprint.get("abstract", ""))
+    add_h("1.2 Problem Statement", 2)
     add_b(blueprint.get("problem_statement", ""))
-    add_h("1.2 Objectives", 2)
+    add_h("1.3 Project Objectives", 2)
     for obj in blueprint.get("objectives", []):
         p = doc.add_paragraph(obj, style="List Bullet")
         p.runs[0].font.name = font_family
         p.runs[0].font.size = Pt(font_size)
-    add_h("1.3 Literature Survey", 2)
-    for item in blueprint.get("literature_survey", []):
-        add_b(f"• {item.get('paper', '')}: {item.get('summary', '')}", align=WD_ALIGN_PARAGRAPH.LEFT)
     doc.add_page_break()
 
-    # CHAPTER 2 & 3
-    add_h("CHAPTER 2: HARDWARE PIN MAPPING & BOM", 1)
-    pins = blueprint.get("pin_connections", [])
-    if pins:
+    # CHAPTER 2: LITERATURE SURVEY
+    add_h("CHAPTER 2: LITERATURE SURVEY", 1)
+    lit_list = blueprint.get("literature_survey", [])
+    if lit_list:
+        lt = doc.add_table(rows=len(lit_list) + 1, cols=2)
+        lt.style = "Table Grid"
+        for idx, h in enumerate(["Reference Paper / Author", "Key Findings & Research Gap"]):
+            c = lt.cell(0, idx)
+            c.text = h
+            _set_cell_shading(c, "1E3A8A")
+            c.paragraphs[0].runs[0].font.color.rgb = RGBColor(255, 255, 255)
+        for i, item in enumerate(lit_list, start=1):
+            lt.cell(i, 0).text = item.get("paper", "")
+            lt.cell(i, 1).text = item.get("summary", "")
+    doc.add_page_break()
+
+    # CHAPTER 3: SYSTEM DESIGN
+    add_h("CHAPTER 3: SYSTEM DESIGN & INTERFACING", 1)
+    if blueprint.get("requires_circuit") and blueprint.get("pin_connections"):
+        add_h("3.1 Hardware Pin-to-Pin Connections", 2)
+        pins = blueprint.get("pin_connections", [])
         pt = doc.add_table(rows=len(pins) + 1, cols=3)
         pt.style = "Table Grid"
-        for idx, h in enumerate(["Controller Pin", "Breadboard / Module Pin", "Signal"]):
+        for idx, h in enumerate(["Source Pin / Module", "Target Pin / Breadboard", "Signal"]):
             c = pt.cell(0, idx)
             c.text = h
             _set_cell_shading(c, "1E3A8A")
@@ -496,18 +557,24 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, guide_name, fm
             pt.cell(i, 0).text = pin.get("from_pin", "")
             pt.cell(i, 1).text = pin.get("to_pin", "")
             pt.cell(i, 2).text = pin.get("signal", "")
+    else:
+        add_h("3.1 Software Pipeline Architecture", 2)
+        for idx, node in enumerate(blueprint.get("software_architecture_nodes", []), start=1):
+            add_b(f"Stage {idx}: {node}", bold=True, align=WD_ALIGN_PARAGRAPH.LEFT)
+    doc.add_page_break()
 
-    add_h("CHAPTER 3: HARDWARE & SOFTWARE REQUIREMENTS", 1)
+    # CHAPTER 4: REQUIREMENTS
+    add_h("CHAPTER 4: HARDWARE & SOFTWARE REQUIREMENTS", 1)
     for hw in blueprint.get("hardware_requirements", []):
         add_b(f"• {hw.get('name', '')} ({hw.get('spec', '')}) — Est. Rs. {hw.get('cost_inr', 0)}", align=WD_ALIGN_PARAGRAPH.LEFT)
     for sw in blueprint.get("software_requirements", []):
         add_b(f"• {sw}", align=WD_ALIGN_PARAGRAPH.LEFT)
     doc.add_page_break()
 
-    # CHAPTER 4
-    add_h("CHAPTER 4: WORKING & SOURCE CODE", 1)
+    # CHAPTER 5: WORKING & CODE
+    add_h("CHAPTER 5: METHODOLOGY & IMPLEMENTATION CODE", 1)
     add_b(blueprint.get("working_principle", ""))
-    add_h(f"4.1 {blueprint.get('primary_code_language', 'Primary Code')}", 2)
+    add_h(f"5.1 Source Code ({blueprint.get('primary_code_language', 'Code')})", 2)
     ct = doc.add_table(rows=1, cols=1)
     ct.style = "Table Grid"
     cc = ct.cell(0, 0)
@@ -517,18 +584,20 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, guide_name, fm
     r.font.size = Pt(9.5)
     doc.add_page_break()
 
-    # CHAPTER 5 & APPENDIX
-    add_h("CHAPTER 5: RESULTS, APPLICATIONS & REFERENCES", 1)
+    # CHAPTER 6: RESULTS & REFERENCES
+    add_h("CHAPTER 6: RESULTS, APPLICATIONS & REFERENCES", 1)
     add_b(blueprint.get("results_and_discussion", ""))
     for adv in blueprint.get("advantages", []):
         add_b("✓ Advantage: " + adv, align=WD_ALIGN_PARAGRAPH.LEFT)
     for ap in blueprint.get("applications", []):
         add_b("✓ Application: " + ap, align=WD_ALIGN_PARAGRAPH.LEFT)
     add_b("Future Scope: " + blueprint.get("future_scope", ""))
+    add_h("References", 2)
     for ref in blueprint.get("references", []):
         add_b(ref, align=WD_ALIGN_PARAGRAPH.LEFT)
     doc.add_page_break()
 
+    # APPENDIX A: VIVA Q&A
     add_h("APPENDIX-A: VIVA-VOCE QUESTIONS & ANSWERS", 1)
     for idx, qa in enumerate(blueprint.get("viva_qa", []), start=1):
         lang_obj = qa.get(viva_lang) or qa.get("en") or {}
@@ -541,13 +610,13 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, guide_name, fm
     return buf
 
 
-# ==================== 3. FRONTEND HTML (TINKERCAD 3D + 5-LANG VIVA + REPORT TOOLS) ====================
+# ==================== 3. FRONTEND HTML (BRANCH->SUBJECTS + TINKERCAD 3D + SMART VIEW) ====================
 HTML_PAGE = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>ProjForge AI — 3D Circuit & VTU Project Studio</title>
+  <title>ProjForge AI — Subject-Aware 3D Circuit & VTU Studio</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -588,9 +657,9 @@ HTML_PAGE = """<!DOCTYPE html>
 
     .label-3d {
       position: absolute; pointer-events: none; transform: translate(-50%, -100%);
-      background: rgba(2, 6, 23, 0.88); border: 1px solid rgba(56, 189, 248, 0.5);
-      color: #e0f2fe; font-size: 10px; font-weight: 600; padding: 2px 7px;
-      border-radius: 6px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+      background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(56, 189, 248, 0.6);
+      color: #f8fafc; font-size: 10px; font-weight: 600; padding: 2px 8px;
+      border-radius: 6px; white-space: nowrap; box-shadow: 0 3px 10px rgba(0,0,0,0.45);
     }
   </style>
 </head>
@@ -599,8 +668,8 @@ HTML_PAGE = """<!DOCTYPE html>
   <!-- 1. SPLASH SCREEN -->
   <div id="splash-screen">
     <div class="cyber-ring"><div class="cyber-core">PF</div></div>
-    <h1 class="text-2xl font-bold mt-4 bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">ProjForge AI 3D</h1>
-    <p class="text-[11px] text-slate-400 mt-1 tracking-widest uppercase">Initializing Tinkercad-Style 3D &amp; VTU Studio...</p>
+    <h1 class="text-2xl font-bold mt-4 bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">ProjForge AI Studio</h1>
+    <p class="text-[11px] text-slate-400 mt-1 tracking-widest uppercase">Subject-Aware Engineering &amp; 3D Circuit Lab...</p>
   </div>
 
   <!-- 2. LOGIN MODAL -->
@@ -669,7 +738,7 @@ HTML_PAGE = """<!DOCTYPE html>
 
       <nav class="hidden md:flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
         <button onclick="navigatePage('page-home')" id="nav-d-home" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white">🏠 Create</button>
-        <button onclick="navigatePage('page-3d')" id="nav-d-3d" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">🧊 3D Circuit Lab</button>
+        <button onclick="navigatePage('page-3d')" id="nav-d-3d" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">🧊 Circuit / Architecture</button>
         <button onclick="navigatePage('page-code')" id="nav-d-code" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">💻 Code &amp; 5-Lang Viva</button>
         <button onclick="navigatePage('page-report')" id="nav-d-report" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">📄 Report Studio</button>
       </nav>
@@ -704,128 +773,168 @@ HTML_PAGE = """<!DOCTYPE html>
 
   <main class="max-w-5xl mx-auto px-4 pt-6">
 
-    <!-- ==================== PAGE 1: CREATE PROJECT ==================== -->
+    <!-- ==================== PAGE 1: BRANCH + SUBJECT + TOPIC GENERATOR ==================== -->
     <section id="page-home" class="page-section active space-y-5">
       <div class="text-center max-w-2xl mx-auto">
         <h1 class="text-2xl sm:text-4xl font-bold leading-tight bg-gradient-to-r from-white via-sky-200 to-indigo-300 bg-clip-text text-transparent">
-          Engineering Project, Custom 3D Circuit &amp; VTU Report Studio
+          Subject-Specific Engineering Project &amp; 3D Circuit Studio
         </h1>
         <p class="text-slate-400 text-xs sm:text-sm mt-2">
-          Generates topic-specific 3D Breadboard circuits, domain-accurate code (Python + optional Arduino), 5-language Viva Q&amp;A &amp; customizable VTU reports.
+          Select your Branch &amp; Subject first—projects, 3D hardware simulations, code &amp; VTU reports adapt automatically.
         </p>
       </div>
 
       <div class="glass rounded-2xl p-5 sm:p-7 max-w-3xl mx-auto shadow-xl border border-slate-800 space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label class="text-xs font-semibold text-sky-400">1. Select Engineering Branch *</label>
+            <select id="branch-input" onchange="updateSubjectsForBranch()"
+              class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white focus:border-sky-400 focus:outline-none">
+              <option value="Computer Science & Engineering (CSE)">Computer Science &amp; Engineering (CSE)</option>
+              <option value="Electronics & Communication (ECE)">Electronics &amp; Communication (ECE)</option>
+              <option value="Artificial Intelligence & ML (AIML)">Artificial Intelligence &amp; ML (AIML)</option>
+              <option value="Electrical & Electronics (EEE)">Electrical &amp; Electronics (EEE)</option>
+              <option value="Information Science (ISE)">Information Science (ISE)</option>
+              <option value="Mechanical Engineering">Mechanical Engineering</option>
+              <option value="Civil Engineering">Civil Engineering</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-emerald-400">2. Select Branch Subject *</label>
+            <select id="subject-input"
+              class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white focus:border-emerald-400 focus:outline-none">
+            </select>
+          </div>
+        </div>
+
         <div>
-          <label class="text-xs font-semibold uppercase tracking-wider text-sky-400">Project Topic / Problem Statement *</label>
+          <label class="text-xs font-semibold uppercase tracking-wider text-sky-400">3. Enter Project Title / Problem Statement *</label>
           <input id="topic-input" type="text"
-            placeholder="e.g., Smart Automated Railway Gate / AI Leaf Disease Detection"
+            placeholder="e.g., Water Level Indicator using Opamp / Smart Attendance System"
             class="w-full mt-1.5 px-4 py-3.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:border-sky-400 focus:outline-none" />
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-          <div>
-            <label class="text-xs text-slate-400">Branch</label>
-            <select id="branch-input" class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white">
-              <option>Computer Science &amp; Engineering (CSE)</option>
-              <option>Electronics &amp; Communication (ECE)</option>
-              <option>Artificial Intelligence &amp; ML (AIML)</option>
-              <option>Electrical &amp; Electronics (EEE)</option>
-              <option>Information Science (ISE)</option>
-              <option>Mechanical Engineering</option>
-              <option>Civil Engineering</option>
-            </select>
-          </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
             <label class="text-xs text-slate-400">Project Level</label>
             <select id="level-input" class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white">
-              <option>2nd / 3rd Year Mini-Project</option>
+              <option>2nd / 3rd Year Subject Mini-Project</option>
               <option>Final Year Major Capstone Project</option>
-              <option>Hackathon / Innovation Prototype</option>
+              <option>Lab / Hackathon Prototype</option>
             </select>
           </div>
           <div>
-            <label class="text-xs text-slate-400">Guide Name</label>
+            <label class="text-xs text-slate-400">Guide Name (For Certificate)</label>
             <input id="guide-input" type="text" placeholder="Dr. S. K. Kulkarni"
               class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white" />
           </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 pt-1">
-          <span class="text-xs text-slate-400">Try:</span>
-          <button type="button" onclick="setSample('Smart Automated Railway Gate Control using IR & Servo Motor')" class="text-xs px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700">🚂 Railway Gate (Servo+IR)</button>
-          <button type="button" onclick="setSample('AI-Powered Leaf Disease Detection using CNN & Python')" class="text-xs px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700">🌿 Leaf Disease AI (Python)</button>
-          <button type="button" onclick="setSample('IoT Gas Leakage & Fire Alert System with OLED & Buzzer')" class="text-xs px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700">🔥 Gas &amp; Fire Alert</button>
+          <span class="text-xs text-slate-400">Quick Examples:</span>
+          <button type="button" onclick="applyQuickExample('Electronics & Communication (ECE)', 'Analog Electronic Circuits (Op-Amp & Timers)', 'Water Level Indicator using Opamp')"
+            class="text-xs px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-slate-700">💧 Water Level Op-Amp (Circuit)</button>
+          <button type="button" onclick="applyQuickExample('Computer Science & Engineering (CSE)', 'Database Management Systems (DBMS)', 'Hospital Patient Records & Appointment Management System')"
+            class="text-xs px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700">🏥 Hospital DBMS (Software)</button>
+          <button type="button" onclick="applyQuickExample('Electronics & Communication (ECE)', 'Embedded Systems & Microcontrollers', 'Smart Automated Railway Gate using Ultrasonic & Servo')"
+            class="text-xs px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-700">🚂 Railway Gate (Arduino)</button>
         </div>
 
         <button id="generate-btn" onclick="generateProject()"
           class="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 font-bold text-white text-sm sm:text-base shadow-lg">
-          ⚡ Generate Project, 3D Circuit &amp; Report
+          ⚡ Generate Subject-Aligned Project
         </button>
       </div>
     </section>
 
-    <!-- ==================== PAGE 2: TINKERCAD-STYLE 3D HARDWARE LAB ==================== -->
+    <!-- ==================== PAGE 2: CONDITIONAL TINKERCAD 3D LAB OR SOFTWARE ARCHITECTURE ==================== -->
     <section id="page-3d" class="page-section space-y-4">
-      <div class="glass rounded-2xl p-4 sm:p-5 border border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <span class="text-[11px] uppercase tracking-wider text-sky-400 font-bold">Topic-Specific 3D Hardware Assembly</span>
-          <h2 id="lab3d-title" class="text-base sm:text-xl font-bold text-white">3D Breadboard &amp; Microcontroller Circuit</h2>
-          <p class="text-xs text-slate-400">1-Finger Drag to Rotate • 2-Finger Pinch / Scroll to Zoom • Smooth Orbit Controls</p>
+      <!-- Case A: Hardware / Circuit Project -> Tinkercad-Style 3D Lab -->
+      <div id="circuit-lab-wrapper" class="space-y-4">
+        <div class="glass rounded-2xl p-4 sm:p-5 border border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <span class="text-[11px] uppercase tracking-wider text-sky-400 font-bold">Tinkercad-Style 3D Circuit Workbench</span>
+            <h2 id="lab3d-title" class="text-base sm:text-xl font-bold text-white">3D Breadboard &amp; Component Assembly</h2>
+            <p class="text-xs text-slate-400">Drag to Rotate 360° • Pinch/Scroll to Zoom • Click Palette below to add/test parts</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="toggle3DSimulation()" id="sim-toggle-btn"
+              class="px-3.5 py-2 rounded-xl bg-emerald-600 font-bold text-white text-xs shadow">
+              ▶ Start Simulation: ON
+            </button>
+            <button onclick="reset3DCamera()"
+              class="px-3 py-2 rounded-xl bg-slate-800 text-xs text-slate-200 border border-slate-700">
+              🔄 Reset View
+            </button>
+          </div>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button onclick="toggle3DSimulation()" id="sim-toggle-btn"
-            class="px-3.5 py-2 rounded-xl bg-emerald-600 font-bold text-white text-xs shadow">
-            ⚡ Power Simulation: ON
-          </button>
-          <button onclick="reset3DCamera()"
-            class="px-3 py-2 rounded-xl bg-slate-800 text-xs text-slate-200 border border-slate-700">
-            🔄 Reset Camera
-          </button>
+
+        <!-- Tinkercad Light-Lab 3D Viewport -->
+        <div class="glass rounded-2xl p-2 border border-slate-700 relative overflow-hidden">
+          <div id="threejs-wrapper" class="relative w-full h-[380px] sm:h-[460px] rounded-xl bg-[#e2e8f0] overflow-hidden">
+            <div id="threejs-container" class="w-full h-full"></div>
+            <div id="labels-overlay" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+          </div>
+
+          <!-- Tinkercad Component Quick-Add Strip -->
+          <div class="flex flex-wrap items-center gap-2 pt-2.5 px-1">
+            <span class="text-[11px] font-semibold text-slate-400">Add Component:</span>
+            <button onclick="addExtra3DPart('sensor_ultrasonic', 'Ultrasonic HC-SR04')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-sky-300">+ Ultrasonic</button>
+            <button onclick="addExtra3DPart('motor_servo', 'Micro Servo Motor')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-300">+ Servo Motor</button>
+            <button onclick="addExtra3DPart('piezo_buzzer', 'Piezo Buzzer')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-rose-300">+ Piezo Buzzer</button>
+            <button onclick="addExtra3DPart('led_bar', 'Status LEDs')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-emerald-300">+ LEDs</button>
+          </div>
+        </div>
+
+        <!-- Pin-to-Pin Wiring Table -->
+        <div class="glass rounded-2xl p-5">
+          <h3 class="text-sm font-bold text-sky-300 mb-3">📌 Exact Pin-to-Pin Breadboard Connections</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left border border-slate-800">
+              <thead class="bg-slate-900 text-sky-300">
+                <tr>
+                  <th class="p-2.5 border-b border-slate-800">Source Pin / IC</th>
+                  <th class="p-2.5 border-b border-slate-800">Breadboard / Target</th>
+                  <th class="p-2.5 border-b border-slate-800">Signal / Voltage</th>
+                </tr>
+              </thead>
+              <tbody id="lab3d-pins" class="divide-y divide-slate-800 text-slate-300"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <!-- 3D Viewport with Floating Component Labels -->
-      <div class="glass rounded-2xl p-2 border border-slate-800 relative overflow-hidden">
-        <div id="threejs-wrapper" class="relative w-full h-[380px] sm:h-[460px] rounded-xl bg-[#040814] overflow-hidden">
-          <div id="threejs-container" class="w-full h-full"></div>
-          <div id="labels-overlay" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
-        </div>
-      </div>
+      <!-- Case B: Pure Software / Non-Circuit Project -> Clean Software Architecture View -->
+      <div id="software-arch-wrapper" class="hidden space-y-4">
+        <div class="glass rounded-2xl p-6 border border-indigo-500/30 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-[11px] uppercase tracking-wider text-indigo-400 font-bold">Pure Software / Algorithmic Project</span>
+              <h2 id="sw-arch-title" class="text-lg sm:text-xl font-bold text-white mt-0.5">System Architecture &amp; Data Pipeline</h2>
+              <p class="text-xs text-slate-400 mt-1">No hardware circuit is needed for this software subject—here is the complete system flow:</p>
+            </div>
+          </div>
 
-      <!-- Pin-to-Pin Wiring Table -->
-      <div class="glass rounded-2xl p-5">
-        <h3 class="text-sm font-bold text-sky-300 mb-3">📌 Exact Pin-to-Pin Breadboard Connections</h3>
-        <div class="overflow-x-auto">
-          <table class="w-full text-xs text-left border border-slate-800">
-            <thead class="bg-slate-900 text-sky-300">
-              <tr>
-                <th class="p-2.5 border-b border-slate-800">Controller Pin</th>
-                <th class="p-2.5 border-b border-slate-800">Breadboard / Component</th>
-                <th class="p-2.5 border-b border-slate-800">Signal / Bus</th>
-              </tr>
-            </thead>
-            <tbody id="lab3d-pins" class="divide-y divide-slate-800 text-slate-300"></tbody>
-          </table>
+          <div id="sw-nodes-container" class="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-2"></div>
         </div>
       </div>
     </section>
 
-    <!-- ==================== PAGE 3: CODE (PYTHON + OPTIONAL ARDUINO) & 5-LANG VIVA ==================== -->
+    <!-- ==================== PAGE 3: CODE & 5-LANG VIVA ==================== -->
     <section id="page-code" class="page-section space-y-5">
       <div id="empty-code" class="glass rounded-2xl p-8 text-center">
-        <p class="text-sm text-slate-400">Generate a project first to view domain-specific source code and 5-language Viva Q&amp;A.</p>
+        <p class="text-sm text-slate-400">Generate a project first to view subject-specific source code and 5-language Viva Q&amp;A.</p>
         <button onclick="navigatePage('page-home')" class="mt-3 px-4 py-2 rounded-xl bg-sky-600 text-xs font-semibold text-white">Go to Create →</button>
       </div>
 
       <div id="content-code" class="hidden space-y-5">
-        <!-- Code Switcher: Primary Code vs Optional Arduino Dump Code -->
         <div class="glass rounded-2xl p-5 space-y-3">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div class="flex flex-wrap gap-2">
               <button onclick="switchCodeMode('primary')" id="btn-code-primary"
                 class="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold">
-                🐍 Main Project Code
+                💻 Main Project Code
               </button>
               <button onclick="switchCodeMode('arduino')" id="btn-code-arduino"
                 class="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-700">
@@ -833,19 +942,18 @@ HTML_PAGE = """<!DOCTYPE html>
               </button>
             </div>
             <button onclick="copySourceCode()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-sky-300 border border-slate-700 self-start">
-              📋 Copy Active Code
+              📋 Copy Code
             </button>
           </div>
           <p id="active-code-subtitle" class="text-xs text-emerald-300 font-semibold"></p>
           <pre id="code-block" class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-emerald-300 overflow-x-auto leading-relaxed"></pre>
         </div>
 
-        <!-- 5-Language Viva Selector -->
         <div class="glass rounded-2xl p-5 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 class="text-base font-bold text-purple-300">🎓 Viva-Voce Q&amp;A (Select Preferred Language)</h3>
-              <p class="text-xs text-slate-400">Choose one language to view clean, focused questions &amp; answers</p>
+              <h3 class="text-base font-bold text-purple-300">🎓 Viva-Voce Q&amp;A (Select One Language)</h3>
+              <p class="text-xs text-slate-400">Tap any language to view focused questions &amp; answers</p>
             </div>
             <div class="flex flex-wrap gap-1.5">
               <button onclick="selectVivaLang('en', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-bold">English</button>
@@ -863,12 +971,11 @@ HTML_PAGE = """<!DOCTYPE html>
     <!-- ==================== PAGE 4: REPORT STUDIO WITH FORMATTING TOOLS ==================== -->
     <section id="page-report" class="page-section space-y-5">
       <div id="empty-report" class="glass rounded-2xl p-8 text-center">
-        <p class="text-sm text-slate-400">Generate a project first to customize and download your VTU .docx report.</p>
+        <p class="text-sm text-slate-400">Generate a project first to customize and download your 15+ page VTU .docx report.</p>
         <button onclick="navigatePage('page-home')" class="mt-3 px-4 py-2 rounded-xl bg-sky-600 text-xs font-semibold text-white">Go to Create →</button>
       </div>
 
       <div id="content-report" class="hidden space-y-5">
-        <!-- Student Document Formatting Toolbar -->
         <div class="glass rounded-2xl p-5 border border-emerald-500/30 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -877,7 +984,7 @@ HTML_PAGE = """<!DOCTYPE html>
             </div>
             <button onclick="downloadDocxDirect()" id="download-docx-btn"
               class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 font-bold text-white text-xs sm:text-sm shadow-lg shrink-0">
-              📥 Download Custom .docx Report
+              📥 Download 15+ Page .docx Report
             </button>
           </div>
 
@@ -916,7 +1023,6 @@ HTML_PAGE = """<!DOCTYPE html>
           </div>
         </div>
 
-        <!-- Live Formatted Document Preview -->
         <div id="live-doc-preview" class="glass rounded-2xl p-6 space-y-4 border-2 border-blue-900/60">
           <h3 class="text-base font-bold text-sky-300">Live Document Preview</h3>
           <p id="rep-abstract" class="text-sm text-slate-200 leading-relaxed"></p>
@@ -925,7 +1031,7 @@ HTML_PAGE = """<!DOCTYPE html>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="glass rounded-2xl p-5">
-            <h3 class="text-sm font-bold text-emerald-300 mb-2">💰 Hardware Bill of Materials (BOM)</h3>
+            <h3 class="text-sm font-bold text-emerald-300 mb-2">💰 Bill of Materials (BOM)</h3>
             <div id="rep-bom" class="text-xs text-slate-300 space-y-2"></div>
           </div>
           <div class="glass rounded-2xl p-5">
@@ -943,7 +1049,7 @@ HTML_PAGE = """<!DOCTYPE html>
       <span class="text-base">🏠</span><span class="text-[10px]">Create</span>
     </button>
     <button onclick="navigatePage('page-3d')" id="nav-m-3d" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
-      <span class="text-base">🧊</span><span class="text-[10px]">3D Lab</span>
+      <span class="text-base">🧊</span><span class="text-[10px]">Circuit/Flow</span>
     </button>
     <button onclick="navigatePage('page-code')" id="nav-m-code" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
       <span class="text-base">💻</span><span class="text-[10px]">Code/Viva</span>
@@ -954,23 +1060,88 @@ HTML_PAGE = """<!DOCTYPE html>
   </nav>
 
   <script>
+    // Branch -> Subjects Mapping
+    const BRANCH_SUBJECTS = {
+      "Computer Science & Engineering (CSE)": [
+        "Artificial Intelligence & Machine Learning",
+        "Database Management Systems (DBMS)",
+        "Computer Networks & Cybersecurity",
+        "Operating Systems & System Software",
+        "Full-Stack Web & Cloud Computing",
+        "Internet of Things (IoT) & Embedded Systems",
+        "Digital Image Processing & Computer Vision"
+      ],
+      "Electronics & Communication (ECE)": [
+        "Analog Electronic Circuits (Op-Amp & Timers)",
+        "Embedded Systems & Microcontrollers",
+        "Digital Signal Processing (DSP)",
+        "VLSI Design & Verilog HDL",
+        "IoT & Wireless Sensor Networks",
+        "Control Systems & Robotics",
+        "Digital Communication Systems"
+      ],
+      "Artificial Intelligence & ML (AIML)": [
+        "Deep Learning & Neural Networks (CNN/RNN)",
+        "Natural Language Processing (NLP)",
+        "Computer Vision & Video Analytics",
+        "Data Science & Predictive Modeling",
+        "Edge AI & TinyML Hardware"
+      ],
+      "Electrical & Electronics (EEE)": [
+        "Power Electronics & Motor Drives",
+        "Microcontrollers & PLC Automation",
+        "Renewable Energy & Smart Grid",
+        "Analog & Digital Instrumentation",
+        "Electric Vehicles (EV) & Battery Management"
+      ],
+      "Information Science (ISE)": [
+        "Software Engineering & Web Applications",
+        "Database Management Systems (DBMS)",
+        "Cloud Computing & DevOps",
+        "Machine Learning & Data Mining",
+        "Information & Network Security"
+      ],
+      "Mechanical Engineering": [
+        "Mechatronics & Industrial Automation",
+        "Robotics & Kinematics",
+        "CAD/CAM & Additive Manufacturing",
+        "Thermal & Fluid Engineering Simulation"
+      ],
+      "Civil Engineering": [
+        "Smart Cities & Structural Health Monitoring",
+        "Environmental & Water Resource Engineering",
+        "Transportation & Traffic Automation",
+        "Geotechnical & Surveying Systems"
+      ]
+    };
+
+    function updateSubjectsForBranch() {
+      const branch = document.getElementById("branch-input").value;
+      const subSelect = document.getElementById("subject-input");
+      const list = BRANCH_SUBJECTS[branch] || ["Core Engineering Project"];
+      subSelect.innerHTML = list.map(s => `<option value="${s}">${s}</option>`).join("");
+    }
+
+    function applyQuickExample(branch, subject, topic) {
+      document.getElementById("branch-input").value = branch;
+      updateSubjectsForBranch();
+      document.getElementById("subject-input").value = subject;
+      document.getElementById("topic-input").value = topic;
+    }
+
     let currentBlueprint = null;
     let studentProfile = JSON.parse(localStorage.getItem("pf_student") || "null");
     let activeCodeMode = "primary";
     let activeVivaLang = "en";
 
     window.addEventListener("DOMContentLoaded", () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const refParam = urlParams.get("ref");
-      if (refParam) localStorage.setItem("pf_referred_by", refParam);
-
+      updateSubjectsForBranch();
       setTimeout(() => {
         const s = document.getElementById("splash-screen");
-        s.style.opacity = "0";
-        s.style.visibility = "hidden";
+        s.style.opacity = "0"; s.style.visibility = "hidden";
         if (!studentProfile || !studentProfile.email) openLoginModal();
         else updateProfileUI();
-      }, 2400);
+      }, 2000);
 
       initThreeJS();
       build3DSceneFromBlueprint(null);
@@ -1005,12 +1176,10 @@ HTML_PAGE = """<!DOCTYPE html>
     });
 
     function openLoginModal() {
-      const m = document.getElementById("login-modal");
-      m.classList.remove("hidden"); m.classList.add("flex");
+      const m = document.getElementById("login-modal"); m.classList.remove("hidden"); m.classList.add("flex");
     }
     function closeLoginModal() {
-      const m = document.getElementById("login-modal");
-      m.classList.add("hidden"); m.classList.remove("flex");
+      const m = document.getElementById("login-modal"); m.classList.add("hidden"); m.classList.remove("flex");
     }
     function skipLogin() {
       studentProfile = { email: "", name: "Guest Student", usn: "1VT23CS001", college: "VTU Affiliated Engineering College" };
@@ -1042,7 +1211,6 @@ HTML_PAGE = """<!DOCTYPE html>
       document.getElementById("menu-usn").innerText = usn;
     }
 
-    // Refer
     function getReferralCode() {
       if (studentProfile && studentProfile.usn && studentProfile.usn !== "1VT23CS001") return "PF-" + studentProfile.usn;
       return "PF-STUDENT";
@@ -1058,24 +1226,23 @@ HTML_PAGE = """<!DOCTYPE html>
     function copyInviteLink() { navigator.clipboard.writeText(`${window.location.origin}/?ref=${getReferralCode()}`); alert("Invite link copied!"); }
     function shareOnWhatsApp() {
       const link = `${window.location.origin}/?ref=${getReferralCode()}`;
-      window.open("https://wa.me/?text=" + encodeURIComponent(`🚀 Build Engineering Projects, 3D Circuits & VTU Reports on ProjForge AI:\n${link}`), "_blank");
+      window.open("https://wa.me/?text=" + encodeURIComponent(`🚀 Build Subject-Aligned Engineering Projects, 3D Circuits & VTU Reports:\n${link}`), "_blank");
     }
-
-    function setSample(txt) { document.getElementById("topic-input").value = txt; }
 
     async function generateProject() {
       const topic = document.getElementById("topic-input").value.trim();
       const branch = document.getElementById("branch-input").value;
+      const subject = document.getElementById("subject-input").value;
       const level = document.getElementById("level-input").value;
       if (!topic) return alert("Please enter your project topic first!");
 
       const btn = document.getElementById("generate-btn");
-      btn.disabled = true; btn.innerText = "⏳ Building Custom 3D Circuit & Blueprint...";
+      btn.disabled = true; btn.innerText = "⏳ Building Subject-Aligned Project...";
       try {
         const res = await fetch("/api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ topic, branch, level })
+          body: JSON.stringify({ topic, branch, subject, level })
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
@@ -1085,25 +1252,42 @@ HTML_PAGE = """<!DOCTYPE html>
       } catch (err) {
         alert("Error: " + err.message);
       } finally {
-        btn.disabled = false; btn.innerText = "⚡ Generate Project, 3D Circuit & Report";
+        btn.disabled = false; btn.innerText = "⚡ Generate Subject-Aligned Project";
       }
     }
 
     function populateAllPages(bp) {
-      // 3D Lab
-      document.getElementById("lab3d-title").innerText = `3D Circuit: ${bp.title}`;
-      build3DSceneFromBlueprint(bp);
-      document.getElementById("lab3d-pins").innerHTML = (bp.pin_connections || []).map(p => `
-        <tr>
-          <td class="p-2.5 font-mono text-sky-300">${p.from_pin}</td>
-          <td class="p-2.5 font-mono text-indigo-300">${p.to_pin}</td>
-          <td class="p-2.5">${p.signal}</td>
-        </tr>
-      `).join("");
+      // Conditional Circuit vs Software Architecture
+      if (bp.requires_circuit) {
+        document.getElementById("circuit-lab-wrapper").classList.remove("hidden");
+        document.getElementById("software-arch-wrapper").classList.add("hidden");
+        document.getElementById("lab3d-title").innerText = `3D Circuit: ${bp.title}`;
+        build3DSceneFromBlueprint(bp);
+        document.getElementById("lab3d-pins").innerHTML = (bp.pin_connections || []).map(p => `
+          <tr>
+            <td class="p-2.5 font-mono text-sky-300">${p.from_pin}</td>
+            <td class="p-2.5 font-mono text-indigo-300">${p.to_pin}</td>
+            <td class="p-2.5">${p.signal}</td>
+          </tr>
+        `).join("");
+      } else {
+        document.getElementById("circuit-lab-wrapper").classList.add("hidden");
+        document.getElementById("software-arch-wrapper").classList.remove("hidden");
+        document.getElementById("sw-arch-title").innerText = `System Flow: ${bp.title}`;
+        document.getElementById("sw-nodes-container").innerHTML = (bp.software_architecture_nodes || []).map((n, i) => `
+          <div class="bg-slate-900 border border-indigo-500/40 rounded-xl p-4 text-center">
+            <span class="text-[10px] font-bold text-sky-400">STAGE 0${i + 1}</span>
+            <p class="text-xs font-semibold text-white mt-1">${n}</p>
+          </div>
+        `).join("");
+      }
 
       // Code & Viva
       document.getElementById("empty-code").classList.add("hidden");
       document.getElementById("content-code").classList.remove("hidden");
+      const ardBtn = document.getElementById("btn-code-arduino");
+      if (bp.has_arduino_hardware) ardBtn.classList.remove("hidden");
+      else ardBtn.classList.add("hidden");
       switchCodeMode("primary");
       renderVivaCards();
 
@@ -1118,14 +1302,13 @@ HTML_PAGE = """<!DOCTYPE html>
       document.getElementById("rep-bom").innerHTML = (bp.hardware_requirements || []).map(h => {
         total += Number(h.cost_inr || 0);
         return `<div class="flex justify-between border-b border-slate-800 pb-1"><span>${h.name}</span><span class="text-emerald-400 font-semibold">₹${h.cost_inr}</span></div>`;
-      }).join("") + `<div class="flex justify-between pt-1 font-bold text-white"><span>Total Cost</span><span>₹${total}</span></div>`;
+      }).join("") + `<div class="flex justify-between pt-1 font-bold text-white"><span>Total Est. Cost</span><span>₹${total}</span></div>`;
 
       document.getElementById("rep-ppt").innerHTML = (bp.ppt_slides || []).map(s => `
         <div class="border-b border-slate-800 pb-1"><span class="text-sky-300 font-semibold">${s.slide}:</span> ${s.points}</div>
       `).join("");
     }
 
-    // Dual Code Switcher
     function switchCodeMode(mode) {
       if (!currentBlueprint) return;
       activeCodeMode = mode;
@@ -1134,13 +1317,13 @@ HTML_PAGE = """<!DOCTYPE html>
       if (mode === "primary") {
         pBtn.className = "px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold";
         aBtn.className = "px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-700";
-        document.getElementById("active-code-subtitle").innerText = `Language: ${currentBlueprint.primary_code_language || "Python"}`;
+        document.getElementById("active-code-subtitle").innerText = `Language: ${currentBlueprint.primary_code_language || "Code"}`;
         document.getElementById("code-block").innerText = currentBlueprint.primary_code || "";
       } else {
         aBtn.className = "px-3.5 py-2 rounded-xl bg-sky-600 text-white text-xs font-bold";
         pBtn.className = "px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-700";
-        document.getElementById("active-code-subtitle").innerText = "Optional Hardware Firmware (.ino) — Ready to Dump onto Arduino / ESP32";
-        document.getElementById("code-block").innerText = currentBlueprint.arduino_code || "// No hardware code required";
+        document.getElementById("active-code-subtitle").innerText = "Optional Hardware Firmware (.ino) for Arduino / ESP32";
+        document.getElementById("code-block").innerText = currentBlueprint.arduino_code || "";
       }
     }
 
@@ -1149,7 +1332,6 @@ HTML_PAGE = """<!DOCTYPE html>
       alert("Code copied!");
     }
 
-    // 5-Language Viva Selector
     function selectVivaLang(lang, btn) {
       activeVivaLang = lang;
       document.querySelectorAll(".viva-lang-btn").forEach(b => {
@@ -1175,21 +1357,17 @@ HTML_PAGE = """<!DOCTYPE html>
       }).join("");
     }
 
-    // Report Formatting Live Preview & Download
     function updateLivePreviewStyle() {
       const box = document.getElementById("live-doc-preview");
-      const fam = document.getElementById("fmt-font-family").value;
-      const sz = document.getElementById("fmt-font-size").value;
-      const lh = document.getElementById("fmt-line-spacing").value;
-      box.style.fontFamily = fam;
-      box.style.fontSize = sz + "px";
-      box.style.lineHeight = lh;
+      box.style.fontFamily = document.getElementById("fmt-font-family").value;
+      box.style.fontSize = document.getElementById("fmt-font-size").value + "px";
+      box.style.lineHeight = document.getElementById("fmt-line-spacing").value;
     }
 
     async function downloadDocxDirect() {
       if (!currentBlueprint) return;
       const btn = document.getElementById("download-docx-btn");
-      btn.disabled = true; btn.innerText = "⏳ Building DOCX...";
+      btn.disabled = true; btn.innerText = "⏳ Building 15+ Page DOCX...";
       try {
         const payload = {
           blueprint: currentBlueprint,
@@ -1197,6 +1375,7 @@ HTML_PAGE = """<!DOCTYPE html>
           usn: (studentProfile && studentProfile.usn) || "1VT23CS001",
           college: (studentProfile && studentProfile.college) || "VTU Affiliated Engineering College",
           branch: document.getElementById("branch-input").value,
+          subject: document.getElementById("subject-input").value,
           guide_name: document.getElementById("guide-input").value.trim() || "Project Guide",
           formatting: {
             font_family: document.getElementById("fmt-font-family").value,
@@ -1212,19 +1391,18 @@ HTML_PAGE = """<!DOCTYPE html>
         if (!res.ok) throw new Error("Failed");
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a"); a.href = url; a.download = "ProjForge_Custom_VTU_Report.docx";
+        const a = document.createElement("a"); a.href = url; a.download = "ProjForge_15Page_VTU_Report.docx";
         document.body.appendChild(a); a.click(); a.remove();
       } catch (err) {
         alert("Download error: " + err.message);
       } finally {
-        btn.disabled = false; btn.innerText = "📥 Download Custom .docx Report";
+        btn.disabled = false; btn.innerText = "📥 Download 15+ Page .docx Report";
       }
     }
 
-    // ==================== TINKERCAD-STYLE DYNAMIC 3D ENGINE ====================
+    // ==================== TINKERCAD-STYLE LIGHT WORKBENCH 3D ENGINE ====================
     let scene, camera, renderer, controls, circuitGroup;
-    let trackedLabels = [];
-    let animParts = [];
+    let trackedLabels = [], animParts = [], extraSlotCount = 0;
     let simActive = true;
 
     function initThreeJS() {
@@ -1232,10 +1410,10 @@ HTML_PAGE = """<!DOCTYPE html>
       if (!container || typeof THREE === "undefined") return;
 
       scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x040814);
+      scene.background = new THREE.Color(0xe2e8f0); // Clean Tinkercad Light Lab Canvas
 
       camera = new THREE.PerspectiveCamera(42, container.clientWidth / container.clientHeight, 0.1, 1000);
-      camera.position.set(0, 8.2, 11.2);
+      camera.position.set(0, 8.5, 11.5);
 
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -1252,24 +1430,53 @@ HTML_PAGE = """<!DOCTYPE html>
         controls.maxDistance = 20;
       }
 
-      scene.add(new THREE.AmbientLight(0xffffff, 0.72));
-      const keyLight = new THREE.DirectionalLight(0xe0f2fe, 1.1);
-      keyLight.position.set(8, 14, 10);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+      const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+      keyLight.position.set(8, 15, 10);
       scene.add(keyLight);
 
-      const grid = new THREE.GridHelper(22, 22, 0x1e3a8a, 0x0f172a);
-      grid.position.y = -0.25;
+      const grid = new THREE.GridHelper(22, 22, 0x94a3b8, 0xcbd5e1);
+      grid.position.y = -0.22;
       scene.add(grid);
 
       circuitGroup = new THREE.Group();
       scene.add(circuitGroup);
-
       animate3D();
     }
 
     function createPartMesh(type) {
       const grp = new THREE.Group();
-      if (type === "sensor_ultrasonic") {
+      if (type === "ic_opamp") {
+        // 14-Pin DIP IC Chip straddling center groove
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.22, 0.55), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+        grp.add(body);
+        for (let px = -0.45; px <= 0.45; px += 0.15) {
+          const pin = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.25, 0.68), new THREE.MeshStandardMaterial({ color: 0x94a3b8 }));
+          pin.position.set(px, -0.05, 0);
+          grp.add(pin);
+        }
+      } else if (type === "sensor_water_probes") {
+        // Transparent Water Tank + Submerged Copper Probes
+        const tank = new THREE.Mesh(
+          new THREE.BoxGeometry(1.3, 0.95, 0.9),
+          new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45 })
+        );
+        const water = new THREE.Mesh(
+          new THREE.BoxGeometry(1.22, 0.55, 0.82),
+          new THREE.MeshStandardMaterial({ color: 0x0284c7, transparent: true, opacity: 0.75 })
+        );
+        water.position.y = -0.15;
+        grp.add(tank, water);
+        animParts.push({ mesh: water, mode: "water" });
+      } else if (type === "led_bar") {
+        // Red, Yellow, Green Indicator LEDs + Piezo
+        [0x22c55e, 0xeab308, 0xef4444].forEach((clr, idx) => {
+          const led = new THREE.Mesh(new THREE.SphereGeometry(0.14, 14, 14), new THREE.MeshBasicMaterial({ color: clr }));
+          led.position.set(-0.35 + idx * 0.35, 0.2, 0);
+          grp.add(led);
+          if (idx === 2) animParts.push({ mesh: led, mode: "blink" });
+        });
+      } else if (type === "sensor_ultrasonic") {
         const pcb = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.65, 0.12), new THREE.MeshStandardMaterial({ color: 0x0284c7 }));
         const eyeL = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.35, 16), new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.7 }));
         eyeL.rotation.x = Math.PI / 2; eyeL.position.set(-0.36, 0, 0.18);
@@ -1281,89 +1488,72 @@ HTML_PAGE = """<!DOCTYPE html>
         arm.position.set(0, 0.52, 0);
         grp.add(body, arm);
         animParts.push({ mesh: arm, mode: "servo" });
-      } else if (type === "oled_display") {
-        const bezel = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.85, 0.14), new THREE.MeshStandardMaterial({ color: 0x1e3a8a }));
-        const screen = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.62, 0.04), new THREE.MeshBasicMaterial({ color: 0x06b6d4 }));
-        screen.position.z = 0.08;
-        grp.add(bezel, screen);
-      } else if (type === "camera_module") {
-        const board = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.9, 0.16), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
-        const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.3, 0.35, 18), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8 }));
-        lens.rotation.x = Math.PI / 2; lens.position.z = 0.2;
-        grp.add(board, lens);
-      } else if (type === "buzzer_alarm") {
-        const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.45, 20), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
-        const led = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
-        led.position.set(0.65, 0.1, 0);
-        grp.add(drum, led);
-        animParts.push({ mesh: led, mode: "blink" });
+      } else if (type === "piezo_buzzer") {
+        const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.4, 20), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+        grp.add(drum);
       } else {
-        const mod = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.65, 0.7), new THREE.MeshStandardMaterial({ color: 0x10b981 }));
+        const mod = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.6, 0.65), new THREE.MeshStandardMaterial({ color: 0x0d9488 }));
         grp.add(mod);
       }
       return grp;
     }
 
+    function add3DWire(p1, p2, p3, colorHex) {
+      const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(...p1), new THREE.Vector3(...p2), new THREE.Vector3(...p3)]);
+      const geo = new THREE.TubeGeometry(curve, 24, 0.042, 8, false);
+      const mat = new THREE.MeshStandardMaterial({ color: colorHex });
+      circuitGroup.add(new THREE.Mesh(geo, mat));
+    }
+
+    function registerLabel(text, x, y, z) {
+      const el = document.createElement("div");
+      el.className = "label-3d";
+      el.innerText = text;
+      document.getElementById("labels-overlay").appendChild(el);
+      trackedLabels.push({ el, pos: new THREE.Vector3(x, y, z) });
+    }
+
     function build3DSceneFromBlueprint(bp) {
       if (!circuitGroup) return;
       while (circuitGroup.children.length > 0) circuitGroup.remove(circuitGroup.children[0]);
-      trackedLabels = [];
-      animParts = [];
+      trackedLabels = []; animParts = []; extraSlotCount = 0;
       document.getElementById("labels-overlay").innerHTML = "";
 
-      function registerLabel(text, x, y, z) {
-        const el = document.createElement("div");
-        el.className = "label-3d";
-        el.innerText = text;
-        document.getElementById("labels-overlay").appendChild(el);
-        trackedLabels.push({ el, pos: new THREE.Vector3(x, y, z) });
+      const supplyLabel = (bp && bp.controller_or_supply) || "Arduino Uno R3";
+      const isAnalogBattery = supplyLabel.toLowerCase().includes("9v") || supplyLabel.toLowerCase().includes("analog");
+
+      if (isAnalogBattery) {
+        // 9V DC Battery Block (Tinkercad style)
+        const bat = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.95, 1.3), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+        bat.position.set(-3.4, 0.35, 0);
+        const cap = new THREE.Mesh(new THREE.BoxGeometry(2.12, 0.35, 1.32), new THREE.MeshStandardMaterial({ color: 0xd97706 }));
+        cap.position.set(-3.4, 0.68, 0);
+        circuitGroup.add(bat, cap);
+        registerLabel("9V DC Power Supply", -3.4, 1.25, 0);
+      } else {
+        // Arduino Uno R3 Blue PCB
+        const mcu = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.22, 2.2), new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.35 }));
+        mcu.position.set(-3.2, 0, 0);
+        const usb = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.36, 0.55), new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.7 }));
+        usb.position.set(-4.65, 0.22, -0.45);
+        const chip = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.14, 0.42), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
+        chip.position.set(-2.9, 0.16, 0.15);
+        circuitGroup.add(mcu, usb, chip);
+        registerLabel(supplyLabel, -3.2, 0.85, 0);
       }
 
-      // 1. Detailed Arduino / ESP32 Board (Left)
-      const mcuName = (bp && bp.controller_board) || "Arduino Uno R3";
-      const mcu = new THREE.Mesh(
-        new THREE.BoxGeometry(3.3, 0.22, 2.2),
-        new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.35 })
-      );
-      mcu.position.set(-3.2, 0, 0);
-      circuitGroup.add(mcu);
-
-      const usbPort = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.36, 0.55), new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.75 }));
-      usbPort.position.set(-4.65, 0.22, -0.45);
-      circuitGroup.add(usbPort);
-
-      const icChip = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.14, 0.42), new THREE.MeshStandardMaterial({ color: 0x090d16 }));
-      icChip.position.set(-2.9, 0.16, 0.15);
-      circuitGroup.add(icChip);
-
-      // Black Pin Headers along MCU right edge
-      const headerStrip = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.24, 1.9), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
-      headerStrip.position.set(-1.7, 0.2, 0);
-      circuitGroup.add(headerStrip);
-      registerLabel(mcuName, -3.2, 0.85, 0);
-
-      // 2. Realistic 830-Point Breadboard with Tie-Point Holes (Right)
-      const bb = new THREE.Mesh(
-        new THREE.BoxGeometry(5.6, 0.26, 2.8),
-        new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.45 })
-      );
+      // 830-Point Breadboard
+      const bb = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.26, 2.8), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 }));
       bb.position.set(2.3, 0, 0);
-      circuitGroup.add(bb);
-
-      // Center DIP Channel Groove
-      const groove = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.03, 0.24), new THREE.MeshStandardMaterial({ color: 0xcbd5e1 }));
+      const groove = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.03, 0.24), new THREE.MeshStandardMaterial({ color: 0x94a3b8 }));
       groove.position.set(2.3, 0.135, 0);
-      circuitGroup.add(groove);
-
-      // Power Rails (+5V Red & -GND Blue)
       const railRed = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.02, 0.07), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
       railRed.position.set(2.3, 0.14, -1.2);
       const railBlue = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.02, 0.07), new THREE.MeshBasicMaterial({ color: 0x2563eb }));
       railBlue.position.set(2.3, 0.14, 1.2);
-      circuitGroup.add(railRed, railBlue);
+      circuitGroup.add(bb, groove, railRed, railBlue);
 
-      // Tie-point pin holes grid
-      const holeMat = new THREE.MeshBasicMaterial({ color: 0x334155 });
+      const holeMat = new THREE.MeshBasicMaterial({ color: 0x475569 });
       const holeGeo = new THREE.BoxGeometry(0.06, 0.02, 0.06);
       for (let gx = -0.1; gx <= 4.7; gx += 0.32) {
         for (let gz of [-0.85, -0.55, 0.55, 0.85]) {
@@ -1374,67 +1564,54 @@ HTML_PAGE = """<!DOCTYPE html>
       }
       registerLabel("830-Pt Breadboard", 2.3, 0.55, 1.35);
 
-      // Helper for 3D Curved Jumper Wires
-      function add3DWire(p1, p2, p3, colorHex) {
-        const curve = new THREE.CatmullRomCurve3([
-          new THREE.Vector3(...p1),
-          new THREE.Vector3(...p2),
-          new THREE.Vector3(...p3)
-        ]);
-        const geo = new THREE.TubeGeometry(curve, 24, 0.042, 8, false);
-        const mat = new THREE.MeshStandardMaterial({ color: colorHex });
-        circuitGroup.add(new THREE.Mesh(geo, mat));
-      }
+      // Power Wires (+VCC Red & -GND Black)
+      add3DWire([-2.2, 0.3, -0.4], [-0.5, 1.35, -0.9], [0.2, 0.15, -1.2], 0xef4444);
+      add3DWire([-2.2, 0.3, 0.4], [-0.5, 1.25, 0.9], [0.2, 0.15, 1.2], 0x1e293b);
 
-      // Standard +5V and GND Power Wires
-      add3DWire([-1.7, 0.25, -0.75], [-0.4, 1.35, -1.0], [0.2, 0.15, -1.2], 0xef4444);
-      add3DWire([-1.7, 0.25, 0.75], [-0.4, 1.25, 1.0], [0.2, 0.15, 1.2], 0x64748b);
-
-      // 3. Dynamic Topic-Specific 3D Components Mounted on Breadboard
-      const parts = (bp && bp.circuit_3d_parts) || [
-        { type: "sensor_ir", label: "Input Sensor", wire_color: "#38bdf8" },
-        { type: "motor_servo", label: "Output Actuator", wire_color: "#f59e0b" },
-        { type: "oled_display", label: "I2C OLED Display", wire_color: "#a855f7" }
+      const parts = (bp && bp.circuit_3d_parts && bp.circuit_3d_parts.length) ? bp.circuit_3d_parts : [
+        { type: "ic_opamp", label: "LM324 Op-Amp IC", wire_color: "#38bdf8" },
+        { type: "sensor_water_probes", label: "Level Sensor Probes", wire_color: "#22c55e" },
+        { type: "led_bar", label: "LED & Buzzer Output", wire_color: "#f59e0b" }
       ];
 
-      const xSlots = [0.6, 2.3, 4.0];
+      const xSlots = [0.7, 2.3, 3.9];
       parts.slice(0, 3).forEach((part, i) => {
         const px = xSlots[i];
-        const pz = i % 2 === 0 ? -0.45 : 0.45;
+        const pz = part.type === "ic_opamp" ? 0 : (i % 2 === 0 ? -0.55 : 0.55);
+        const py = part.type === "ic_opamp" ? 0.24 : 0.55;
         const mesh = createPartMesh(part.type);
-        mesh.position.set(px, 0.52, pz);
+        mesh.position.set(px, py, pz);
         circuitGroup.add(mesh);
 
-        // Pin legs into breadboard
-        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.35, 0.08), new THREE.MeshStandardMaterial({ color: 0x94a3b8 }));
-        leg.position.set(px, 0.25, pz);
-        circuitGroup.add(leg);
-
-        // Signal Jumper Wire from MCU to Component
-        const mcuZ = -0.35 + i * 0.35;
-        add3DWire([-1.7, 0.25, mcuZ], [(px - 1.7) / 2, 1.7 + i * 0.25, pz], [px, 0.22, pz], part.wire_color || "#38bdf8");
-
-        registerLabel(part.label || "Module", px, 1.25, pz);
+        add3DWire([0.7, 0.28, 0], [(px + 0.7) / 2, 1.45 + i * 0.2, pz], [px, 0.2, pz], part.wire_color || "#38bdf8");
+        registerLabel(part.label || "Module", px, py + 0.75, pz);
       });
+    }
+
+    function addExtra3DPart(type, label) {
+      if (!circuitGroup) return;
+      const offsetX = 0.8 + (extraSlotCount % 4) * 1.1;
+      extraSlotCount++;
+      const mesh = createPartMesh(type);
+      mesh.position.set(offsetX, 0.55, -1.85);
+      circuitGroup.add(mesh);
+      add3DWire([offsetX, 0.25, -1.85], [offsetX, 1.2, -1.5], [offsetX, 0.15, -1.2], "#10b981");
+      registerLabel(label, offsetX, 1.25, -1.85);
     }
 
     let simTick = 0;
     function animate3D() {
       requestAnimationFrame(animate3D);
       if (controls) controls.update();
-
       if (simActive) {
         simTick += 0.05;
         animParts.forEach(item => {
-          if (item.mode === "servo") {
-            item.mesh.rotation.y = Math.sin(simTick) * 0.9;
-          } else if (item.mode === "blink") {
-            item.mesh.material.color.setHex(Math.sin(simTick * 2.5) > 0 ? 0xef4444 : 0x450a0a);
-          }
+          if (item.mode === "servo") item.mesh.rotation.y = Math.sin(simTick) * 0.9;
+          else if (item.mode === "blink") item.mesh.material.color.setHex(Math.sin(simTick * 2.5) > 0 ? 0xef4444 : 0x7f1d1d);
+          else if (item.mode === "water") item.mesh.scale.y = 0.65 + 0.35 * ((Math.sin(simTick * 0.8) + 1) / 2);
         });
       }
 
-      // Project 3D positions to 2D floating labels
       const container = document.getElementById("threejs-container");
       if (container && camera && trackedLabels.length > 0) {
         const w = container.clientWidth, h = container.clientHeight;
@@ -1447,21 +1624,20 @@ HTML_PAGE = """<!DOCTYPE html>
           item.el.style.display = (v.z < 1 && x > 0 && x < w && y > 0 && y < h) ? "block" : "none";
         });
       }
-
       if (renderer && scene && camera) renderer.render(scene, camera);
     }
 
     function toggle3DSimulation() {
       simActive = !simActive;
       const btn = document.getElementById("sim-toggle-btn");
-      btn.innerText = simActive ? "⚡ Power Simulation: ON" : "⏸️ Simulation: PAUSED";
+      btn.innerText = simActive ? "▶ Start Simulation: ON" : "⏸️ Simulation: PAUSED";
       btn.className = simActive
         ? "px-3.5 py-2 rounded-xl bg-emerald-600 font-bold text-white text-xs shadow"
         : "px-3.5 py-2 rounded-xl bg-amber-600 font-bold text-white text-xs shadow";
     }
 
     function reset3DCamera() {
-      if (camera) camera.position.set(0, 8.2, 11.2);
+      if (camera) camera.position.set(0, 8.5, 11.5);
       if (controls) { controls.target.set(0, 0, 0); controls.update(); }
     }
 
@@ -1489,11 +1665,12 @@ def index():
 def api_generate():
     data = request.get_json(force=True)
     topic = data.get("topic", "").strip()
-    branch = data.get("branch", "Computer Science & Engineering").strip()
+    branch = data.get("branch", "Computer Science & Engineering (CSE)").strip()
+    subject = data.get("subject", "Core Engineering").strip()
     level = data.get("level", "3rd Year Mini-Project").strip()
     if not topic:
         return jsonify({"error": "Please enter a project topic."}), 400
-    blueprint = generate_project_blueprint(topic, branch, level)
+    blueprint = generate_project_blueprint(topic, branch, subject, level)
     return jsonify({"status": "ok", "blueprint": blueprint})
 
 
@@ -1508,6 +1685,7 @@ def download_docx():
         payload.get("usn") or "1VT23CS001",
         payload.get("college") or "VTU Affiliated Engineering College",
         payload.get("branch") or "Engineering",
+        payload.get("subject") or "Engineering Subject",
         payload.get("guide_name") or "Project Guide",
         fmt
     )
