@@ -528,7 +528,7 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, guide_name):
     return buf
 
 
-# ==================== 3. FRONTEND HTML (4s FLASH + LOGIN/LOGOUT + FREE MODE) ====================
+# ==================== 3. FRONTEND HTML (FLASH + LOGIN/LOGOUT + REFER FRIENDS) ====================
 HTML_PAGE = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -603,6 +603,10 @@ HTML_PAGE = """<!DOCTYPE html>
         </div>
       </div>
 
+      <div id="referred-banner" class="hidden mb-3 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-300">
+        🎉 You were invited by a friend (<span id="ref-by-code" class="font-mono font-bold"></span>)!
+      </div>
+
       <form id="login-form" class="space-y-3.5 mt-4">
         <div>
           <label class="text-xs text-slate-300 font-medium">Student Email ID *</label>
@@ -637,18 +641,61 @@ HTML_PAGE = """<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- 3. HEADER WITH LOGOUT OPTION -->
+  <!-- 3. REFER FRIENDS MODAL -->
+  <div id="refer-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div class="glass max-w-md w-full rounded-2xl p-6 shadow-2xl border border-indigo-500/40 relative">
+      <button onclick="closeReferModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-sm">✕</button>
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-xl">🎁</div>
+        <div>
+          <h2 class="text-lg font-bold text-white">Refer Friends &amp; Classmates</h2>
+          <p class="text-xs text-slate-400">Help your batchmates finish mini-projects &amp; VTU reports in seconds</p>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 mt-4">
+        <span class="text-[11px] uppercase tracking-wider text-slate-400">Your Personal Referral Code</span>
+        <div class="flex items-center justify-between mt-1">
+          <span id="my-ref-code" class="font-mono font-bold text-base text-sky-400">PF-STUDENT</span>
+          <button onclick="copyRefCode()" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200">Copy Code</button>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 mt-3">
+        <span class="text-[11px] uppercase tracking-wider text-slate-400">Your Shareable Invite Link</span>
+        <input id="my-ref-link" type="text" readonly
+          class="w-full mt-1.5 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 font-mono focus:outline-none" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mt-5">
+        <button onclick="shareOnWhatsApp()"
+          class="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-white text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20">
+          <span>💬 Share on WhatsApp</span>
+        </button>
+        <button onclick="copyInviteLink()"
+          class="py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-semibold text-white text-xs flex items-center justify-center gap-1.5">
+          <span>🔗 Copy Invite Link</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. HEADER WITH REFER & LOGOUT OPTIONS -->
   <header class="sticky top-0 z-40 glass border-b border-slate-800">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
       <div class="flex items-center gap-2.5">
         <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow">PF</div>
         <div>
           <span class="brand-font font-bold text-lg text-white">ProjForge <span class="text-sky-400">AI</span></span>
-          <span class="hidden sm:inline-block ml-2 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Free Student Edition</span>
+          <span class="hidden md:inline-block ml-2 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Free Student Edition</span>
         </div>
       </div>
 
-      <div class="flex items-center gap-2.5">
+      <div class="flex items-center gap-2">
+        <button onclick="openReferModal()"
+          class="text-xs px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-400/40 text-indigo-200 font-semibold transition">
+          🎁 Refer Friends
+        </button>
         <button onclick="openLoginModal()" id="user-badge"
           class="text-xs px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200">
           👤 Student Login
@@ -661,7 +708,7 @@ HTML_PAGE = """<!DOCTYPE html>
     </div>
   </header>
 
-  <!-- 4. GENERATOR SECTION -->
+  <!-- 5. GENERATOR SECTION -->
   <main class="max-w-7xl mx-auto px-4 py-8">
     <section class="text-center max-w-3xl mx-auto mb-8">
       <h1 class="text-3xl md:text-5xl font-bold leading-tight bg-gradient-to-r from-white via-sky-200 to-indigo-300 bg-clip-text text-transparent">
@@ -723,7 +770,7 @@ HTML_PAGE = """<!DOCTYPE html>
       </button>
     </section>
 
-    <!-- 5. RESULTS WORKSPACE -->
+    <!-- 6. RESULTS WORKSPACE -->
     <section id="result-section" class="hidden mt-10 space-y-6">
       <div class="glass rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-sky-500/30">
         <div>
@@ -732,10 +779,16 @@ HTML_PAGE = """<!DOCTYPE html>
           <p id="res-tagline" class="text-xs text-slate-400 mt-1"></p>
         </div>
 
-        <button onclick="downloadDocxDirect()" id="download-docx-btn"
-          class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-bold text-white text-sm shadow-lg shadow-emerald-600/25 shrink-0">
-          📥 Download 15+ Page VTU Report (.docx)
-        </button>
+        <div class="flex flex-wrap gap-2.5 shrink-0">
+          <button onclick="openReferModal()"
+            class="px-4 py-3 rounded-xl bg-indigo-600/90 hover:bg-indigo-500 font-semibold text-white text-xs border border-indigo-400/30">
+            🎁 Share with Friends
+          </button>
+          <button onclick="downloadDocxDirect()" id="download-docx-btn"
+            class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-bold text-white text-sm shadow-lg shadow-emerald-600/25">
+            📥 Download 15+ Page VTU Report (.docx)
+          </button>
+        </div>
       </div>
 
       <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
@@ -823,6 +876,15 @@ HTML_PAGE = """<!DOCTYPE html>
     let studentProfile = JSON.parse(localStorage.getItem("pf_student") || "null");
 
     window.addEventListener("DOMContentLoaded", () => {
+      // Check if opened via friend's referral link (?ref=...)
+      const urlParams = new URLSearchParams(window.location.search);
+      const refParam = urlParams.get("ref");
+      if (refParam) {
+        localStorage.setItem("pf_referred_by", refParam);
+        document.getElementById("ref-by-code").innerText = refParam;
+        document.getElementById("referred-banner").classList.remove("hidden");
+      }
+
       const steps = ["Loading Gemini Neural Architecture...", "Calibrating Circuit Renderer...", "Preparing VTU 15+ Page DOCX Engine..."];
       let idx = 0;
       const iv = setInterval(() => {
@@ -846,7 +908,7 @@ HTML_PAGE = """<!DOCTYPE html>
     function openLoginModal() {
       if (studentProfile) {
         document.getElementById("login-email").value = studentProfile.email || "";
-        document.getElementById("login-name").value = studentProfile.name === "Student Name" ? "" : (studentProfile.name || "");
+        document.getElementById("login-name").value = studentProfile.name === "Guest Student" ? "" : (studentProfile.name || "");
         document.getElementById("login-usn").value = studentProfile.usn === "1VT23CS001" ? "" : (studentProfile.usn || "");
         document.getElementById("login-college").value = studentProfile.college || "";
       }
@@ -894,6 +956,50 @@ HTML_PAGE = """<!DOCTYPE html>
         document.getElementById("user-badge").innerText = `👤 ${studentProfile.name} (${studentProfile.usn})`;
         document.getElementById("logout-btn").classList.remove("hidden");
       }
+    }
+
+    // Refer Friends Modal Logic
+    function getReferralCode() {
+      if (studentProfile && studentProfile.usn && studentProfile.usn !== "1VT23CS001") {
+        return "PF-" + studentProfile.usn.replace(/[^A-Z0-9]/gi, "");
+      }
+      let savedCode = localStorage.getItem("pf_my_ref_code");
+      if (!savedCode) {
+        savedCode = "PF-" + Math.floor(1000 + Math.random() * 9000);
+        localStorage.setItem("pf_my_ref_code", savedCode);
+      }
+      return savedCode;
+    }
+
+    function openReferModal() {
+      const code = getReferralCode();
+      const baseUrl = window.location.origin;
+      const inviteUrl = `${baseUrl}/?ref=${code}`;
+      document.getElementById("my-ref-code").innerText = code;
+      document.getElementById("my-ref-link").value = inviteUrl;
+      const m = document.getElementById("refer-modal");
+      m.classList.remove("hidden"); m.classList.add("flex");
+    }
+
+    function closeReferModal() {
+      const m = document.getElementById("refer-modal");
+      m.classList.add("hidden"); m.classList.remove("flex");
+    }
+
+    function copyRefCode() {
+      navigator.clipboard.writeText(document.getElementById("my-ref-code").innerText);
+      alert("Referral code copied!");
+    }
+
+    function copyInviteLink() {
+      navigator.clipboard.writeText(document.getElementById("my-ref-link").value);
+      alert("Invite link copied! Share it with your friends.");
+    }
+
+    function shareOnWhatsApp() {
+      const link = document.getElementById("my-ref-link").value;
+      const msg = `🚀 Hey! Build your complete Engineering Mini-Project, Circuit Diagram, Source Code & 15+ Page VTU Report (.docx) with English + Kannada Viva Q&A in 10 seconds for FREE!\n\nTry ProjForge AI here:\n${link}`;
+      window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank");
     }
 
     function setSample(txt) { document.getElementById("topic-input").value = txt; }
