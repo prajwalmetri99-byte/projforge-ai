@@ -625,7 +625,7 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, subject, guide
     return buf
 
 
-# ==================== 3. FRONTEND HTML (ULTRA PRO UI + CUSTOM ICONS + VOICE VIVA + INTERACTIVE 3D) ====================
+# ==================== 3. FRONTEND HTML (ERROR-FREE + AUTO-HIDE SPLASH) ====================
 HTML_PAGE = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -648,14 +648,18 @@ HTML_PAGE = """<!DOCTYPE html>
     h1, h2, h3, .brand-font { font-family: 'Space Grotesk', sans-serif; }
     code, pre { font-family: 'JetBrains Mono', monospace; }
 
+    /* Guaranteed CSS + JS Splash Auto-Dismiss */
     #splash-screen {
       position: fixed; inset: 0; z-index: 9999;
       background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      transition: opacity 0.45s ease, visibility 0.45s ease;
+      animation: splashAutoOut 0.45s ease 1.3s forwards;
+    }
+    @keyframes splashAutoOut {
+      to { opacity: 0; visibility: hidden; pointer-events: none; }
     }
     .logo-pulse {
-      animation: pulseGlow 1.6s ease-in-out infinite alternate;
+      animation: pulseGlow 1.1s ease-in-out infinite alternate;
     }
     @keyframes pulseGlow {
       from { transform: scale(0.95); filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.4)); }
@@ -663,12 +667,12 @@ HTML_PAGE = """<!DOCTYPE html>
     }
 
     .glass {
-      background: rgba(15, 23, 42, 0.82);
+      background: rgba(15, 23, 42, 0.84);
       backdrop-filter: blur(18px);
       border: 1px solid rgba(148, 163, 184, 0.14);
       box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.55);
     }
-    .page-section { display: none; animation: fadeIn 0.24s ease; }
+    .page-section { display: none; animation: fadeIn 0.22s ease; }
     .page-section.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -682,10 +686,10 @@ HTML_PAGE = """<!DOCTYPE html>
 </head>
 <body class="pb-24 md:pb-10">
 
-  <!-- 1. SPLASH SCREEN WITH CUSTOM SVG EMBLEM -->
+  <!-- 1. SPLASH SCREEN -->
   <div id="splash-screen">
     <div class="logo-pulse">
-      <svg width="88" height="88" viewBox="0 0 88 88" fill="none">
+      <svg width="84" height="84" viewBox="0 0 88 88" fill="none">
         <defs>
           <linearGradient id="pfGrad" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
             <stop stop-color="#38BDF8"/>
@@ -802,7 +806,7 @@ HTML_PAGE = """<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- 5. TOP NAVBAR WITH BEAUTIFUL SVG ICON -->
+  <!-- 5. TOP NAVBAR -->
   <header class="sticky top-0 z-40 glass border-b border-slate-800/90">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigatePage('page-home')">
@@ -936,7 +940,6 @@ HTML_PAGE = """<!DOCTYPE html>
         </button>
       </div>
 
-      <!-- Recent Projects History Bar -->
       <div id="recent-history-box" class="hidden glass rounded-2xl p-4 max-w-3xl mx-auto border border-slate-800/80">
         <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">🕒 Recent Generated Projects (Click to Re-Open)</span>
         <div id="recent-list" class="flex flex-wrap gap-2 mt-2"></div>
@@ -983,7 +986,6 @@ HTML_PAGE = """<!DOCTYPE html>
             <div id="labels-overlay" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
           </div>
 
-          <!-- Interactive Live Sensor / Input Stimulus Slider -->
           <div class="bg-slate-950/90 rounded-xl p-3 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex items-center gap-2">
               <span class="text-xs font-bold text-sky-300">🎛️ Live Sensor / Input Level:</span>
@@ -1256,18 +1258,30 @@ HTML_PAGE = """<!DOCTYPE html>
     let selectedRating = 5;
     let sensorStimulusLevel = 0.65;
 
+    function dismissSplash() {
+      const s = document.getElementById("splash-screen");
+      if (s) {
+        s.style.opacity = "0";
+        s.style.visibility = "hidden";
+        s.style.pointerEvents = "none";
+      }
+    }
+
     window.addEventListener("DOMContentLoaded", () => {
       updateSubjectsForBranch();
       renderRecentProjects();
       setTimeout(() => {
-        const s = document.getElementById("splash-screen");
-        s.style.opacity = "0"; s.style.visibility = "hidden";
+        dismissSplash();
         if (!studentProfile || !studentProfile.email) openLoginModal();
         else updateProfileUI();
-      }, 1500);
+      }, 1200);
 
-      initThreeJS();
-      build3DSceneFromBlueprint(null);
+      try {
+        initThreeJS();
+        build3DSceneFromBlueprint(null);
+      } catch (e) {
+        console.warn("3D init warning:", e);
+      }
     });
 
     function navigatePage(pageId) {
@@ -1535,10 +1549,13 @@ HTML_PAGE = """<!DOCTYPE html>
       renderVivaCards();
     }
 
-    function speakVivaText(text) {
-      if (!("speechSynthesis" in window)) return alert("Voice audio not supported on this browser.");
+    function speakVivaByIndex(idx) {
+      if (!currentBlueprint || !("speechSynthesis" in window)) return;
+      const item = (currentBlueprint.viva_qa || [])[idx];
+      if (!item) return;
+      const entry = item[activeVivaLang] || item["en"] || {};
       window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
+      const u = new SpeechSynthesisUtterance(entry.a || "");
       const langMap = { en: "en-IN", kn: "kn-IN", hi: "hi-IN", te: "te-IN", ta: "ta-IN" };
       u.lang = langMap[activeVivaLang] || "en-IN";
       window.speechSynthesis.speak(u);
@@ -1549,12 +1566,11 @@ HTML_PAGE = """<!DOCTYPE html>
       const list = currentBlueprint.viva_qa || [];
       document.getElementById("viva-grid").innerHTML = list.map((item, idx) => {
         const entry = item[activeVivaLang] || item["en"] || {};
-        const safeSpeak = (entry.a || "").replace(/'/g, "");
         return `
           <div class="bg-slate-900/95 p-4 rounded-xl border border-slate-800 space-y-2">
             <div class="flex items-start justify-between gap-2">
               <p class="text-xs font-bold text-sky-300">Q${idx + 1}. ${entry.q || ""}</p>
-              <button onclick="speakVivaText('${safeSpeak}')" class="shrink-0 text-[10px] px-2 py-1 rounded bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/30">
+              <button onclick="speakVivaByIndex(${idx})" class="shrink-0 text-[10px] px-2 py-1 rounded bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/30">
                 🔊 Listen
               </button>
             </div>
