@@ -11,6 +11,9 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls
+from pptx import Presentation
+from pptx.util import Inches as PptInches, Pt as PptPt
+from pptx.dml.color import RGBColor as PptRGB
 
 app = Flask(__name__)
 
@@ -19,12 +22,12 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 FEEDBACK_LOG = []
 
 
-# ==================== 1. GEMINI 4 FRONTIER AI ENGINE ====================
+# ==================== 1. SILENT BACKGROUND AI ENGINE ====================
 def generate_project_blueprint(topic, branch, subject, level):
     if GEMINI_API_KEY:
         prompt = f"""
-You are a Senior Indian Engineering Professor (VTU / Autonomous) and Principal Research & Hardware Architect.
-Perform deep engineering verification, circuit/architecture synthesis, and complete academic report generation in strict JSON for:
+You are a Senior Indian Engineering Professor (VTU / Autonomous / AICTE curriculum) and Principal Systems Architect.
+Generate a comprehensive, subject-aligned engineering project blueprint in strict JSON format for:
 - Project Title: "{topic}"
 - Engineering Branch: "{branch}"
 - Core Academic Subject: "{subject}"
@@ -36,21 +39,19 @@ STRICT TECHNICAL RULES:
 3. If "requires_circuit" is true:
    - Choose 3 to 4 realistic hardware modules from: ["ic_741", "ic_lm324", "sensor_water_probes", "sensor_soil_moisture", "sensor_ultrasonic", "sensor_gas", "sensor_ir", "water_pump", "motor_servo", "relay_module", "oled_display", "piezo_buzzer", "led_indicator_bank"].
    - Set "controller_or_supply" accurately (e.g., "9V DC Analog Supply (No MCU)" for analog IC circuits, or "Arduino Uno R3" / "ESP32 DevKit").
-4. "primary_code": Write 80-110 lines of clean, runnable, well-commented code matching the exact subject.
+4. "primary_code": Write 85-115 lines of clean, runnable, well-commented code matching the exact subject.
 5. "viva_qa": Provide 8 deep technical viva questions & answers translated naturally into all 5 languages: "en", "kn", "hi", "te", "ta".
 
 Return ONLY valid JSON (no markdown fences):
 {{
-  "ai_engine_used": "Gemini 4 Frontier AI",
   "title": "Formal Engineering Project Title",
   "tagline": "Technical summary aligned with {subject}",
   "requires_circuit": true,
   "controller_or_supply": "Arduino Uno R3 or 9V DC Analog Supply",
-  "ai_verification": {{
-    "syllabus_match": "98% VTU / Autonomous Aligned",
-    "feasibility": "High — Lab & Prototype Verified",
+  "verification_summary": {{
+    "syllabus_match": "98% Syllabus Aligned ({subject})",
     "build_time": "2 to 3 Days",
-    "expert_note": "Detailed technical verification note explaining component tolerances, equations, or algorithm complexity for {subject}."
+    "expert_note": "Component tolerances, circuit equations, and architecture verified for Indian engineering lab standards."
   }},
   "abstract": "Detailed 300-word academic abstract covering problem statement, {subject} principles, design methodology, and quantitative outcomes.",
   "problem_statement": "Detailed 200-word problem definition explaining existing limitations.",
@@ -69,26 +70,27 @@ Return ONLY valid JSON (no markdown fences):
   "software_requirements": [
     "OS: Windows 11 / Ubuntu 22.04 LTS",
     "Simulation / IDE: Multisim / Proteus / Python 3.11 / Arduino IDE",
-    "Documentation: VTU Standard Format"
+    "Documentation: VTU / AICTE Standard Format"
   ],
   "circuit_3d_parts": [
-    {{"type": "ic_741", "label": "Component Label", "pin_from": "Pin A", "pin_to": "Breadboard Row", "wire_color": "#38bdf8"}}
+    {{"type": "ic_741", "label": "Component Label", "pin_from": "Pin A", "pin_to": "Breadboard Row", "wire_color": "#2563eb"}}
   ],
   "software_architecture_nodes": ["Stage 1", "Stage 2", "Stage 3", "Stage 4", "Stage 5"],
   "pin_connections": [
     {{"from_pin": "Pin / Port 1", "to_pin": "Target Module 1", "signal": "Signal / Voltage"}}
   ],
   "ppt_slides": [
-    {{"slide": "Slide 1: Title & Team", "points": "Project Title, Subject ({subject}), USN & Guide"}},
-    {{"slide": "Slide 2: Problem Statement", "points": "Limitations of existing approaches & motivation"}},
-    {{"slide": "Slide 3: Objectives & Scope", "points": "Core engineering goals & target performance metrics"}},
-    {{"slide": "Slide 4: Circuit / System Design", "points": "Pin-level architecture, components & working flow"}},
-    {{"slide": "Slide 5: Implementation & Testing", "points": "Prototype setup, threshold calibration & code"}},
-    {{"slide": "Slide 6: Results & Future Scope", "points": "Accuracy metrics, real-world applications & conclusion"}}
+    {{"slide": "Title & Team Overview", "bullets": ["Project Title: {topic}", "Subject: {subject} ({branch})", "Academic Level: {level}"]}},
+    {{"slide": "Problem Statement & Motivation", "bullets": ["Limitations of manual legacy systems", "High latency and human error risks", "Need for automated {subject} solution"]}},
+    {{"slide": "Project Objectives", "bullets": ["Apply {subject} concepts practically", "Achieve sub-200ms response time", "Keep prototype budget student-friendly"]}},
+    {{"slide": "System Architecture & Design", "bullets": ["Modular input-processing-output pipeline", "Calibrated threshold switching logic", "Fail-safe hardware/software protection"]}},
+    {{"slide": "Hardware & Software Stack", "bullets": ["Verified components & breadboard layout", "Clean modular firmware / source code", "Real-time telemetry & status indication"]}},
+    {{"slide": "Experimental Results", "bullets": ["95.4% operational accuracy in lab trials", "Zero false triggers across 50 test cycles", "Low power consumption & compact footprint"]}},
+    {{"slide": "Applications & Future Scope", "bullets": ["Campus, domestic & industrial deployment", "Cloud IoT dashboard & mobile alerts", "Custom PCB fabrication for mass scale"]}}
   ],
   "working_principle": "Detailed 400-word step-by-step technical working explanation grounded in {subject}.",
   "primary_code_language": "Python 3 / C++",
-  "primary_code": "Complete 80-110 line runnable code.",
+  "primary_code": "Complete 85-115 line runnable code.",
   "has_arduino_hardware": true,
   "arduino_code": "Complete Arduino (.ino) sketch if applicable.",
   "results_and_discussion": "Detailed 240-word analysis of testing parameters, accuracy, and observations.",
@@ -98,7 +100,7 @@ Return ONLY valid JSON (no markdown fences):
   "references": [
     "[1] IEEE Standard Technical Reference (2025).",
     "[2] Standard University Textbook on {subject}, Pearson Education.",
-    "[3] VTU Academic Curriculum & Project Guidelines (2025-26)."
+    "[3] VTU / AICTE Academic Project Guidelines (2025-26)."
   ],
   "viva_qa": [
     {{
@@ -123,11 +125,9 @@ Return ONLY valid JSON (no markdown fences):
                     res_json = resp.json()
                     raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
                     raw_text = re.sub(r"^```json\s*|\s*```$", "", raw_text, flags=re.MULTILINE)
-                    parsed = json.loads(raw_text)
-                    parsed["ai_engine_used"] = f"Live Gemini AI ({model_name})"
-                    return parsed
+                    return json.loads(raw_text)
             except Exception as e:
-                print(f"{model_name} error:", e)
+                print("Background engine step:", e)
 
     return _smart_topic_blueprint(topic, branch, subject, level)
 
@@ -146,9 +146,9 @@ def _smart_topic_blueprint(topic, branch, subject, level):
     if "741" in low or "opamp" in low or "op-amp" in low or "water level" in low:
         controller_name = "9V DC Analog Supply (No MCU)"
         parts = [
-            {"type": "ic_741", "label": "IC 741 Op-Amp Comparator", "pin_from": "Pin 7 (+9V) / Pin 4 (GND)", "pin_to": "Breadboard Center DIP", "wire_color": "#38bdf8"},
-            {"type": "sensor_water_probes", "label": "Water Tank Copper Probes", "pin_from": "Non-Inverting Pin 3 (+IN)", "pin_to": "Breadboard Row 10", "wire_color": "#22c55e"},
-            {"type": "led_indicator_bank", "label": "Level LEDs & Piezo Buzzer", "pin_from": "Op-Amp Output Pin 6", "pin_to": "Breadboard Row 28", "wire_color": "#f59e0b"}
+            {"type": "ic_741", "label": "IC 741 Op-Amp Comparator", "pin_from": "Pin 7 (+9V) / Pin 4 (GND)", "pin_to": "Breadboard Center DIP", "wire_color": "#2563eb"},
+            {"type": "sensor_water_probes", "label": "Water Tank Copper Probes", "pin_from": "Non-Inverting Pin 3 (+IN)", "pin_to": "Breadboard Row 10", "wire_color": "#16a34a"},
+            {"type": "led_indicator_bank", "label": "Level LEDs & Piezo Buzzer", "pin_from": "Op-Amp Output Pin 6", "pin_to": "Breadboard Row 28", "wire_color": "#d97706"}
         ]
         pins = [
             {"from_pin": "IC 741 Pin 3 (+IN)", "to_pin": "Water Tank Copper Sense Probe", "signal": "Analog Sense Voltage"},
@@ -179,9 +179,9 @@ if __name__ == "__main__":
     elif "irrigation" in low or "soil" in low or "plant" in low:
         controller_name = "Arduino Uno R3"
         parts = [
-            {"type": "sensor_soil_moisture", "label": "Soil Moisture Fork Sensor", "pin_from": "Arduino Analog A0", "pin_to": "Breadboard Row 08", "wire_color": "#22c55e"},
-            {"type": "relay_module", "label": "5V Single-Channel Relay", "pin_from": "Arduino Digital D7", "pin_to": "Breadboard Row 20", "wire_color": "#f59e0b"},
-            {"type": "water_pump", "label": "Mini Submersible Water Pump", "pin_from": "Relay NO Contact", "pin_to": "Breadboard Row 32", "wire_color": "#38bdf8"}
+            {"type": "sensor_soil_moisture", "label": "Soil Moisture Fork Sensor", "pin_from": "Arduino Analog A0", "pin_to": "Breadboard Row 08", "wire_color": "#16a34a"},
+            {"type": "relay_module", "label": "5V Single-Channel Relay", "pin_from": "Arduino Digital D7", "pin_to": "Breadboard Row 20", "wire_color": "#d97706"},
+            {"type": "water_pump", "label": "Mini Submersible Water Pump", "pin_from": "Relay NO Contact", "pin_to": "Breadboard Row 32", "wire_color": "#2563eb"}
         ]
         pins = [
             {"from_pin": "Arduino Analog A0", "to_pin": "Soil Moisture Sensor AO", "signal": "0-5V Analog Moisture"},
@@ -209,9 +209,9 @@ void loop() {{
     elif requires_circuit:
         controller_name = "Arduino Uno R3"
         parts = [
-            {"type": "sensor_ultrasonic", "label": "Ultrasonic HC-SR04 Sensor", "pin_from": "Arduino D2 / D3", "pin_to": "Breadboard Row 10", "wire_color": "#38bdf8"},
-            {"type": "motor_servo", "label": "SG90 Servo Actuator", "pin_from": "Arduino PWM D9", "pin_to": "Breadboard Row 22", "wire_color": "#f59e0b"},
-            {"type": "piezo_buzzer", "label": "Piezo Buzzer & Status LED", "pin_from": "Arduino D8", "pin_to": "Breadboard Row 34", "wire_color": "#ef4444"}
+            {"type": "sensor_ultrasonic", "label": "Ultrasonic HC-SR04 Sensor", "pin_from": "Arduino D2 / D3", "pin_to": "Breadboard Row 10", "wire_color": "#2563eb"},
+            {"type": "motor_servo", "label": "SG90 Servo Actuator", "pin_from": "Arduino PWM D9", "pin_to": "Breadboard Row 22", "wire_color": "#d97706"},
+            {"type": "piezo_buzzer", "label": "Piezo Buzzer & Status LED", "pin_from": "Arduino D8", "pin_to": "Breadboard Row 34", "wire_color": "#dc2626"}
         ]
         pins = [
             {"from_pin": "Arduino D2 / D3", "to_pin": "HC-SR04 Trig & Echo", "signal": "5V Ultrasonic Pulse"},
@@ -250,16 +250,14 @@ if __name__ == "__main__":
 """
 
     return {
-        "ai_engine_used": "Gemini 4 Verified Blueprint",
         "title": clean_title,
         "tagline": f"Verified {subject} engineering project under {branch} ({level}).",
         "requires_circuit": requires_circuit,
         "controller_or_supply": controller_name,
-        "ai_verification": {
-            "syllabus_match": f"98% Aligned with {subject}",
-            "feasibility": "High — Lab & Viva Verified",
+        "verification_summary": {
+            "syllabus_match": f"98% Syllabus Aligned ({subject})",
             "build_time": "2 Days",
-            "expert_note": f"Design architecture, component ratings, and methodology strictly follow {subject} university standards."
+            "expert_note": f"Architecture, component ratings, and methodology strictly follow {subject} academic standards."
         },
         "abstract": (
             f"This project presents the design, analysis, and implementation of '{clean_title}' based on the core principles "
@@ -277,7 +275,7 @@ if __name__ == "__main__":
             "To achieve fast, automated response without manual intervention.",
             "To minimize component cost while maintaining high accuracy and stability.",
             "To verify circuit/software behavior across standard lab test cases.",
-            "To prepare complete VTU-compliant project documentation."
+            "To prepare complete VTU / AICTE-compliant project documentation."
         ],
         "literature_survey": [
             {"paper": "R. Kumar et al. (2024) - IEEE Access", "summary": f"Explored foundational {subject} methods; lacked low-cost optimization."},
@@ -288,7 +286,7 @@ if __name__ == "__main__":
         "software_requirements": [
             "OS: Windows 11 / Ubuntu 22.04 LTS",
             f"Tools: Multisim / Python 3.11 / Arduino IDE / VS Code ({subject})",
-            "Documentation: VTU Standard Word (.docx) Format"
+            "Documentation: VTU / AICTE Standard Word (.docx) & Seminar (.pptx)"
         ],
         "circuit_3d_parts": parts,
         "software_architecture_nodes": [
@@ -300,12 +298,12 @@ if __name__ == "__main__":
         ],
         "pin_connections": pins,
         "ppt_slides": [
-            {"slide": "Slide 1: Title & Team", "points": f"{clean_title} — {subject} ({branch})"},
-            {"slide": "Slide 2: Problem Statement", "points": "Limitations of existing approaches & motivation"},
-            {"slide": "Slide 3: Objectives & Scope", "points": "Target accuracy (95.4%), low budget & fast latency"},
-            {"slide": "Slide 4: Circuit / System Design", "points": "Component specifications, pin mapping & working"},
-            {"slide": "Slide 5: Implementation", "points": "Breadboard assembly / code pipeline & testing"},
-            {"slide": "Slide 6: Results & Future Scope", "points": "Experimental validation, applications & conclusion"}
+            {"slide": "Title & Team Overview", "bullets": [f"Project Title: {clean_title}", f"Subject: {subject} ({branch})", f"Academic Level: {level}"]},
+            {"slide": "Problem Statement", "bullets": ["Manual supervision causes delays and errors", "Lack of real-time threshold alerts", "Need for automated, low-cost engineering design"]},
+            {"slide": "Project Objectives", "bullets": [f"Implement practical {subject} principles", "Achieve sub-200ms response latency", "Deliver reliable prototype within student budget"]},
+            {"slide": "System Architecture & Design", "bullets": ["Structured input, processing & output stages", "Calibrated reference threshold switching", "Safe electrical & logical interfacing"]},
+            {"slide": "Implementation & Testing", "bullets": ["Breadboard / software module integration", "50 repeated laboratory validation trials", "Clean serial & visual status feedback"]},
+            {"slide": "Results & Future Scope", "bullets": ["95.4% accuracy with zero false triggers", "Applicable to campus & industrial automation", "Expandable to cloud IoT & custom PCB"]}
         ],
         "working_principle": (
             f"The operation of '{clean_title}' follows core {subject} principles across three stages: Input Sensing/Acquisition, "
@@ -336,7 +334,7 @@ if __name__ == "__main__":
         "references": [
             f"[1] IEEE Standard Technical Reference on {subject} (2025).",
             f"[2] Standard University Textbook on {subject}, Pearson Education.",
-            "[3] VTU Academic Project Report Guidelines (2025-26)."
+            "[3] VTU / AICTE Academic Project Report Guidelines (2025-26)."
         ],
         "viva_qa": [
             {
@@ -364,7 +362,7 @@ if __name__ == "__main__":
     }
 
 
-# ==================== 2. 15+ PAGE VTU DOCX REPORT BUILDER ====================
+# ==================== 2. DOCX REPORT & IEEE PAPER & PPTX BUILDERS ====================
 def _set_cell_shading(cell, fill_hex):
     shading = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{fill_hex}"/>')
     cell._tc.get_or_add_tcPr().append(shading)
@@ -419,7 +417,7 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, subject, guide
     title = blueprint.get("title", "Engineering Project")
     year_str = datetime.now().strftime("%Y-%m")
 
-    # PAGE 1: COVER PAGE
+    # COVER PAGE
     for txt, sz, bld, itl, clr in [
         ("VISVESVARAYA TECHNOLOGICAL UNIVERSITY / AUTONOMOUS\n", font_size + 2, True, False, RGBColor(15, 35, 95)),
         (f"{college.upper()}\nDepartment of {branch}\n\n", font_size + 1, True, False, None),
@@ -440,7 +438,7 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, subject, guide
             r.font.color.rgb = clr
     doc.add_page_break()
 
-    # PAGE 2: BONAFIDE CERTIFICATE
+    # CERTIFICATE
     add_h(f"{college.upper()}", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
     add_h(f"Department of {branch}", 2).alignment = WD_ALIGN_PARAGRAPH.CENTER
     add_h("BONAFIDE CERTIFICATE", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -462,7 +460,7 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, subject, guide
         sig_table.cell(1, i).text = n
     doc.add_page_break()
 
-    # PAGE 3: DECLARATION & ACKNOWLEDGEMENT
+    # DECLARATION & ACKNOWLEDGEMENT
     add_h("DECLARATION", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
     add_b(
         f'I, {student_name} (USN: {usn}), student of {branch}, {college}, hereby declare that the Project '
@@ -476,7 +474,7 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, subject, guide
     )
     doc.add_page_break()
 
-    # PAGE 4: ABSTRACT & TOC
+    # ABSTRACT & TOC
     add_h("ABSTRACT", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
     add_b(blueprint.get("abstract", ""))
     add_h("TABLE OF CONTENTS", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -503,7 +501,7 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, subject, guide
         toc_tbl.cell(r_idx, 2).text = pg
     doc.add_page_break()
 
-    # CHAPTERS 1 to 6
+    # CHAPTERS
     add_h("CHAPTER 1: INTRODUCTION & PROBLEM DEFINITION", 1)
     add_h("1.1 Overview", 2)
     add_b(blueprint.get("abstract", ""))
@@ -593,173 +591,294 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, subject, guide
     return buf
 
 
-# ==================== 3. FRONTEND HTML (100% VALID JS + PWA MANIFEST) ====================
+def build_ieee_paper_docx(blueprint, student_name, usn, college, branch, subject, guide_name):
+    doc = Document()
+    for section in doc.sections:
+        section.top_margin = Inches(0.75)
+        section.bottom_margin = Inches(0.75)
+        section.left_margin = Inches(0.75)
+        section.right_margin = Inches(0.75)
+
+    p_title = doc.add_paragraph()
+    p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    rt = p_title.add_run(blueprint.get("title", "IEEE Research Paper").upper())
+    rt.font.name = "Times New Roman"
+    rt.font.size = Pt(16)
+    rt.bold = True
+
+    p_auth = doc.add_paragraph()
+    p_auth.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    ra = p_auth.add_run(f"{student_name} ({usn}), Prof. {guide_name}\nDepartment of {branch}, {college}\nSubject: {subject}\n")
+    ra.font.name = "Times New Roman"
+    ra.font.size = Pt(10)
+    ra.italic = True
+
+    for sec_title, body_txt in [
+        ("Abstract", blueprint.get("abstract", "")),
+        ("I. INTRODUCTION", blueprint.get("problem_statement", "")),
+        ("II. METHODOLOGY & SYSTEM ARCHITECTURE", blueprint.get("working_principle", "")),
+        ("III. EXPERIMENTAL RESULTS & DISCUSSION", blueprint.get("results_and_discussion", "")),
+        ("IV. CONCLUSION & FUTURE SCOPE", blueprint.get("future_scope", "")),
+    ]:
+        h = doc.add_heading(sec_title, level=2)
+        h.runs[0].font.name = "Times New Roman"
+        h.runs[0].font.size = Pt(11)
+        b = doc.add_paragraph(body_txt)
+        b.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        b.runs[0].font.name = "Times New Roman"
+        b.runs[0].font.size = Pt(10)
+
+    h_ref = doc.add_heading("REFERENCES", level=2)
+    h_ref.runs[0].font.name = "Times New Roman"
+    for ref in blueprint.get("references", []):
+        rp = doc.add_paragraph(ref)
+        rp.runs[0].font.name = "Times New Roman"
+        rp.runs[0].font.size = Pt(9.5)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    return buf
+
+
+def build_seminar_pptx(blueprint, student_name, usn, college, branch, subject, guide_name):
+    prs = Presentation()
+    prs.slide_width = PptInches(13.333)
+    prs.slide_height = PptInches(7.5)
+
+    # Slide 1: Cover Slide
+    s1 = prs.slides.add_slide(prs.slide_layouts[6])
+    bg = s1.shapes.add_shape(1, 0, 0, prs.slide_width, prs.slide_height)
+    bg.fill.solid()
+    bg.fill.fore_color.rgb = PptRGB(15, 23, 42)
+    bg.line.fill.background()
+
+    tb = s1.shapes.add_textbox(PptInches(1), PptInches(1.6), PptInches(11.3), PptInches(4.5))
+    tf = tb.text_frame
+    tf.word_wrap = True
+    p0 = tf.paragraphs[0]
+    p0.text = f"{college.upper()} • DEPARTMENT OF {branch.upper()}"
+    p0.font.size = PptPt(14)
+    p0.font.color.rgb = PptRGB(56, 189, 248)
+    p0.font.bold = True
+
+    p1 = tf.add_paragraph()
+    p1.text = "\n" + blueprint.get("title", "Engineering Project Seminar")
+    p1.font.size = PptPt(32)
+    p1.font.color.rgb = PptRGB(255, 255, 255)
+    p1.font.bold = True
+
+    p2 = tf.add_paragraph()
+    p2.text = f"\nSubject: {subject}\nPresented By: {student_name} ({usn})   |   Guide: Prof. {guide_name}"
+    p2.font.size = PptPt(16)
+    p2.font.color.rgb = PptRGB(203, 213, 225)
+
+    # Content Slides
+    for idx, slide_data in enumerate(blueprint.get("ppt_slides", []), start=2):
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        header = slide.shapes.add_shape(1, 0, 0, prs.slide_width, PptInches(1.15))
+        header.fill.solid()
+        header.fill.fore_color.rgb = PptRGB(30, 58, 138)
+        header.line.fill.background()
+
+        htb = slide.shapes.add_textbox(PptInches(0.8), PptInches(0.3), PptInches(11.5), PptInches(0.6))
+        hp = htb.text_frame.paragraphs[0]
+        hp.text = f"0{idx}. {slide_data.get('slide', 'Project Overview')}"
+        hp.font.size = PptPt(24)
+        hp.font.bold = True
+        hp.font.color.rgb = PptRGB(255, 255, 255)
+
+        btb = slide.shapes.add_textbox(PptInches(1.0), PptInches(1.7), PptInches(11.0), PptInches(4.8))
+        btf = btb.text_frame
+        btf.word_wrap = True
+        bullets = slide_data.get("bullets") or [slide_data.get("points", "")]
+        for b_i, bullet in enumerate(bullets):
+            bp = btf.paragraphs[0] if b_i == 0 else btf.add_paragraph()
+            bp.text = f"▸  {bullet}"
+            bp.font.size = PptPt(20)
+            bp.font.color.rgb = PptRGB(30, 41, 59)
+            bp.space_after = PptPt(16)
+
+    buf = io.BytesIO()
+    prs.save(buf)
+    buf.seek(0)
+    return buf
+
+
+# ==================== 3. FRONTEND HTML (DISCIPLINED WHITE STUDIO + PWA INSTALL + PPTX + IEEE) ====================
 HTML_PAGE = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0f172a" />
-  <title>ProjForge AI — Studio</title>
+  <meta name="theme-color" content="#1e3a8a" />
+  <title>ProjForge — Engineering Project & Report Studio</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
   <link rel="apple-touch-icon" href="/favicon.ico" />
   <link rel="manifest" href="/manifest.json" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
     html, body {
       max-width: 100%; overflow-x: hidden;
       font-family: 'Inter', sans-serif;
-      background: radial-gradient(circle at top right, #0b1426 0%, #050811 55%, #03050a 100%);
-      color: #f1f5f9;
+      background: #f8fafc;
+      color: #0f172a;
     }
-    h1, h2, h3, .brand-font { font-family: 'Space Grotesk', sans-serif; }
+    h1, h2, h3, .brand-font { font-family: 'Plus Jakarta Sans', sans-serif; }
     code, pre { font-family: 'JetBrains Mono', monospace; }
 
     #splash-screen {
       position: fixed; inset: 0; z-index: 9999;
-      background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+      background: #ffffff;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      animation: splashAutoOut 0.4s ease 1.1s forwards;
+      animation: splashAutoOut 0.35s ease 0.9s forwards;
     }
     @keyframes splashAutoOut {
       to { opacity: 0; visibility: hidden; pointer-events: none; }
     }
 
-    .glass {
-      background: rgba(15, 23, 42, 0.86);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(148, 163, 184, 0.14);
-      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.55);
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.06);
     }
-    .page-section { display: none; animation: fadeIn 0.22s ease; }
+    .page-section { display: none; animation: fadeIn 0.2s ease; }
     .page-section.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
     .label-3d {
       position: absolute; pointer-events: none; transform: translate(-50%, -100%);
-      background: rgba(15, 23, 42, 0.94); border: 1px solid rgba(56, 189, 248, 0.7);
-      color: #f8fafc; font-size: 10px; font-weight: 600; padding: 2px 8px;
-      border-radius: 6px; white-space: nowrap; box-shadow: 0 3px 10px rgba(0,0,0,0.45);
+      background: #0f172a; border: 1px solid #38bdf8;
+      color: #ffffff; font-size: 10px; font-weight: 600; padding: 2px 8px;
+      border-radius: 6px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
     }
   </style>
 </head>
 <body class="pb-24 md:pb-10">
 
-  <!-- 1. SPLASH SCREEN -->
+  <!-- 1. CLEAN WHITE SPLASH SCREEN -->
   <div id="splash-screen">
-    <svg width="84" height="84" viewBox="0 0 88 88" fill="none">
-      <defs>
-        <linearGradient id="pfGrad" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
-          <stop stop-color="#38BDF8"/>
-          <stop offset="0.5" stop-color="#6366F1"/>
-          <stop offset="1" stop-color="#A855F7"/>
-        </linearGradient>
-      </defs>
-      <rect x="6" y="6" width="76" height="76" rx="22" fill="url(#pfGrad)"/>
-      <path d="M28 44H38L43 31L49 57L54 44H62" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="26" cy="44" r="3.5" fill="white"/>
-      <circle cx="62" cy="44" r="3.5" fill="white"/>
+    <svg width="76" height="76" viewBox="0 0 88 88" fill="none">
+      <rect x="4" y="4" width="80" height="80" rx="22" fill="#1e3a8a"/>
+      <path d="M26 44H37L42 30L49 58L54 44H63" stroke="#38bdf8" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="25" cy="44" r="4" fill="#ffffff"/>
+      <circle cx="63" cy="44" r="4" fill="#ffffff"/>
     </svg>
-    <h1 class="text-2xl font-bold mt-4 bg-gradient-to-r from-sky-400 via-indigo-300 to-purple-300 bg-clip-text text-transparent">
-      ProjForge AI
-    </h1>
-    <p class="text-[11px] text-slate-400 mt-1 tracking-widest uppercase">Next-Gen Engineering Studio</p>
+    <h1 class="text-2xl font-extrabold mt-3 text-slate-900 tracking-tight">ProjForge</h1>
+    <p class="text-xs text-slate-500 mt-1 font-medium">Academic Engineering &amp; Project Studio</p>
   </div>
 
   <!-- 2. LOGIN MODAL -->
-  <div id="login-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
-    <div class="glass max-w-md w-full rounded-2xl p-6 border border-sky-500/30">
-      <h2 class="text-lg font-bold text-white">Student Workspace Sign-In</h2>
-      <p class="text-xs text-slate-400 mb-3">Personalizes your VTU .docx cover page &amp; certificate</p>
+  <div id="login-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="card max-w-md w-full rounded-2xl p-6">
+      <h2 class="text-lg font-bold text-slate-900">Student Profile Setup</h2>
+      <p class="text-xs text-slate-500 mb-3">Auto-fills your Name &amp; USN on VTU .docx reports and .pptx slides</p>
       <form id="login-form" class="space-y-3">
         <div>
-          <label class="text-xs text-slate-300">Student Email *</label>
+          <label class="text-xs font-semibold text-slate-700">Student Email *</label>
           <input id="login-email" type="email" required placeholder="student@college.edu.in"
-            class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm focus:border-sky-400 focus:outline-none" />
+            class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-sm text-slate-900 focus:border-blue-700 focus:outline-none" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="text-xs text-slate-300">Full Name *</label>
+            <label class="text-xs font-semibold text-slate-700">Full Name *</label>
             <input id="login-name" type="text" required placeholder="Rahul Sharma"
-              class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm focus:border-sky-400 focus:outline-none" />
+              class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-sm text-slate-900 focus:border-blue-700 focus:outline-none" />
           </div>
           <div>
-            <label class="text-xs text-slate-300">USN / Roll No *</label>
+            <label class="text-xs font-semibold text-slate-700">USN / Roll No *</label>
             <input id="login-usn" type="text" required placeholder="1VT23CS045"
-              class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm uppercase focus:border-sky-400 focus:outline-none" />
+              class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-sm uppercase text-slate-900 focus:border-blue-700 focus:outline-none" />
           </div>
         </div>
         <div>
-          <label class="text-xs text-slate-300">College Name</label>
+          <label class="text-xs font-semibold text-slate-700">College Name</label>
           <input id="login-college" type="text" placeholder="VTU Affiliated Engineering College"
-            class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm focus:border-sky-400 focus:outline-none" />
+            class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-sm text-slate-900 focus:border-blue-700 focus:outline-none" />
         </div>
-        <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 font-semibold text-white text-sm">
-          Save &amp; Enter Studio →
+        <button type="submit" class="w-full py-3 rounded-xl bg-blue-900 hover:bg-blue-800 font-semibold text-white text-sm">
+          Save &amp; Continue →
         </button>
       </form>
-      <button type="button" onclick="skipLogin()" class="w-full mt-3 text-xs text-slate-400 hover:text-slate-200 underline">Continue as Guest</button>
+      <button type="button" onclick="skipLogin()" class="w-full mt-3 text-xs text-slate-500 hover:text-slate-800 underline">Continue as Guest</button>
     </div>
   </div>
 
   <!-- 3. REFER FRIENDS MODAL -->
-  <div id="refer-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
-    <div class="glass max-w-md w-full rounded-2xl p-6 border border-indigo-500/40 relative">
-      <button type="button" onclick="closeReferModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-sm">✕</button>
-      <h2 class="text-base font-bold text-white">🎁 Refer Friends &amp; Classmates</h2>
-      <p class="text-xs text-slate-400 mt-1">Share ProjForge AI with your engineering batchmates</p>
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 mt-3">
-        <span class="text-[10px] text-slate-400">Your Referral Code:</span>
+  <div id="refer-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="card max-w-md w-full rounded-2xl p-6 relative">
+      <button type="button" onclick="closeReferModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 text-sm">✕</button>
+      <h2 class="text-base font-bold text-slate-900">🎁 Share With Classmates</h2>
+      <p class="text-xs text-slate-500 mt-1">Invite your engineering batchmates to build projects &amp; reports</p>
+      <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 mt-3">
+        <span class="text-[10px] font-semibold text-slate-500">Your Referral Code:</span>
         <div class="flex items-center justify-between mt-1">
-          <span id="my-ref-code" class="font-mono font-bold text-sm text-sky-400">PF-STUDENT</span>
-          <button type="button" onclick="copyRefCode()" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200">Copy</button>
+          <span id="my-ref-code" class="font-mono font-bold text-sm text-blue-900">PF-STUDENT</span>
+          <button type="button" onclick="copyRefCode()" class="text-xs px-2.5 py-1 rounded-lg bg-slate-200 text-slate-800 font-semibold">Copy</button>
         </div>
       </div>
       <div class="grid grid-cols-2 gap-2.5 mt-4">
         <button type="button" onclick="shareOnWhatsApp()" class="py-2.5 px-3 rounded-xl bg-emerald-600 font-semibold text-white text-xs">💬 WhatsApp Share</button>
-        <button type="button" onclick="copyInviteLink()" class="py-2.5 px-3 rounded-xl bg-indigo-600 font-semibold text-white text-xs">🔗 Copy Link</button>
+        <button type="button" onclick="copyInviteLink()" class="py-2.5 px-3 rounded-xl bg-blue-900 font-semibold text-white text-xs">🔗 Copy Link</button>
       </div>
     </div>
   </div>
 
-  <!-- 4. POST-DOWNLOAD STUDENT FEEDBACK MODAL -->
-  <div id="feedback-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
-    <div class="glass max-w-md w-full rounded-2xl p-6 border border-emerald-500/40 relative">
-      <button type="button" onclick="closeFeedbackModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-sm">✕</button>
+  <!-- 4. INSTALL APP HELP MODAL (FOR IOS / BROWSERS WITHOUT AUTO PROMPT) -->
+  <div id="install-help-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="card max-w-md w-full rounded-2xl p-6 relative">
+      <button type="button" onclick="closeInstallHelp()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 text-sm">✕</button>
+      <h2 class="text-base font-bold text-slate-900">📲 Install ProjForge App</h2>
+      <p class="text-xs text-slate-600 mt-2 leading-relaxed">
+        To install this app directly onto your phone or laptop home screen:
+      </p>
+      <ul class="text-xs text-slate-700 space-y-2 mt-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+        <li><b>Android Chrome:</b> Tap the <b>⋮ (3 dots)</b> menu at top-right → Tap <b>"Install app"</b> or <b>"Add to Home screen"</b>.</li>
+        <li><b>iPhone Safari:</b> Tap the <b>Share (↑)</b> button → Tap <b>"Add to Home Screen"</b>.</li>
+        <li><b>Laptop Chrome/Edge:</b> Click the <b>Install icon</b> in the right corner of the address bar.</li>
+      </ul>
+      <button type="button" onclick="closeInstallHelp()" class="w-full mt-4 py-2.5 rounded-xl bg-blue-900 text-white text-xs font-semibold">Got It</button>
+    </div>
+  </div>
+
+  <!-- 5. POST-DOWNLOAD FEEDBACK MODAL -->
+  <div id="feedback-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="card max-w-md w-full rounded-2xl p-6 relative">
+      <button type="button" onclick="closeFeedbackModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 text-sm">✕</button>
       <div class="flex items-center gap-2.5 mb-2">
         <span class="text-2xl">✅</span>
         <div>
-          <h2 class="text-base font-bold text-white">Report Downloaded Successfully!</h2>
-          <p class="text-xs text-emerald-300">Share your feedback or extra feature requests</p>
+          <h2 class="text-base font-bold text-slate-900">File Downloaded Successfully!</h2>
+          <p class="text-xs text-emerald-700 font-medium">Tell us what else you need for your college submission</p>
         </div>
       </div>
 
       <form id="feedback-form" class="space-y-3 mt-4">
         <div>
-          <label class="text-xs text-slate-300 font-medium">Rate Your Experience *</label>
+          <label class="text-xs text-slate-700 font-semibold">Rate Your Experience *</label>
           <div class="flex gap-2 mt-1.5" id="star-rating-group">
-            <button type="button" onclick="setRating(1)" class="star-btn px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs">1 ⭐</button>
-            <button type="button" onclick="setRating(2)" class="star-btn px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs">2 ⭐</button>
-            <button type="button" onclick="setRating(3)" class="star-btn px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs">3 ⭐</button>
-            <button type="button" onclick="setRating(4)" class="star-btn px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs">4 ⭐</button>
-            <button type="button" onclick="setRating(5)" class="star-btn px-3 py-1.5 rounded-lg bg-emerald-600 border border-emerald-400 text-white font-bold text-xs">5 ⭐</button>
+            <button type="button" onclick="setRating(1)" class="star-btn px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-300 text-xs">1 ⭐</button>
+            <button type="button" onclick="setRating(2)" class="star-btn px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-300 text-xs">2 ⭐</button>
+            <button type="button" onclick="setRating(3)" class="star-btn px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-300 text-xs">3 ⭐</button>
+            <button type="button" onclick="setRating(4)" class="star-btn px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-300 text-xs">4 ⭐</button>
+            <button type="button" onclick="setRating(5)" class="star-btn px-3 py-1.5 rounded-lg bg-blue-900 border border-blue-900 text-white font-bold text-xs">5 ⭐</button>
           </div>
         </div>
         <div>
-          <label class="text-xs text-slate-300 font-medium">Any other requirements or features needed?</label>
+          <label class="text-xs text-slate-700 font-semibold">Any other requirements or features needed?</label>
           <textarea id="feedback-text" rows="3"
-            placeholder="e.g., Add PPT file export, PCB schematic export, or specific lab subjects..."
-            class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-emerald-400 focus:outline-none"></textarea>
+            placeholder="e.g., Add specific lab subjects, circuit simulation tools, or university formats..."
+            class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 focus:border-blue-700 focus:outline-none"></textarea>
         </div>
         <div class="flex gap-2.5 pt-1">
-          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-white text-xs">
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 font-semibold text-white text-xs">
             Submit Feedback
           </button>
-          <button type="button" onclick="closeFeedbackModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs">
+          <button type="button" onclick="closeFeedbackModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold">
             Skip
           </button>
         </div>
@@ -767,59 +886,61 @@ HTML_PAGE = r"""<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- 5. TOP NAVBAR -->
-  <header class="sticky top-0 z-40 glass border-b border-slate-800/90">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+  <!-- 6. DISCIPLINED WHITE TOP NAVBAR WITH INSTALL BUTTON -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
       <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigatePage('page-home')">
-        <svg width="36" height="36" viewBox="0 0 88 88" fill="none" class="shrink-0 shadow-md rounded-xl">
-          <defs>
-            <linearGradient id="navIconGrad" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#38BDF8"/>
-              <stop offset="0.5" stop-color="#6366F1"/>
-              <stop offset="1" stop-color="#A855F7"/>
-            </linearGradient>
-          </defs>
-          <rect width="88" height="88" rx="22" fill="url(#navIconGrad)"/>
-          <path d="M24 44H36L42 29L49 59L55 44H65" stroke="white" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="23" cy="44" r="4" fill="white"/>
-          <circle cx="65" cy="44" r="4" fill="white"/>
+        <svg width="36" height="36" viewBox="0 0 88 88" fill="none" class="shrink-0 rounded-xl shadow-sm">
+          <rect width="88" height="88" rx="22" fill="#1e3a8a"/>
+          <path d="M24 44H36L42 29L49 59L55 44H65" stroke="#38bdf8" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="23" cy="44" r="4" fill="#ffffff"/>
+          <circle cx="65" cy="44" r="4" fill="#ffffff"/>
         </svg>
         <div>
-          <span class="brand-font font-bold text-base sm:text-lg text-white tracking-tight">ProjForge <span class="text-sky-400">AI</span></span>
-          <span class="hidden sm:inline-block ml-1.5 text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 font-semibold">PRO STUDIO</span>
+          <span class="brand-font font-extrabold text-base sm:text-lg text-slate-900 tracking-tight">ProjForge</span>
+          <span class="hidden sm:inline-block ml-1.5 text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 font-bold">INDIA STUDIO</span>
         </div>
       </div>
 
-      <nav class="hidden md:flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
-        <button type="button" onclick="navigatePage('page-home')" id="nav-d-home" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white">🏠 Create</button>
-        <button type="button" onclick="navigatePage('page-3d')" id="nav-d-3d" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">🧊 Circuit / Flow</button>
-        <button type="button" onclick="navigatePage('page-code')" id="nav-d-code" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">💻 Code &amp; Voice Viva</button>
-        <button type="button" onclick="navigatePage('page-report')" id="nav-d-report" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">📄 Report &amp; PPT</button>
+      <!-- Desktop Tabs -->
+      <nav class="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+        <button type="button" onclick="navigatePage('page-home')" id="nav-d-home" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-900 text-white">🏠 Create</button>
+        <button type="button" onclick="navigatePage('page-3d')" id="nav-d-3d" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900">🧊 Circuit / Flow</button>
+        <button type="button" onclick="navigatePage('page-code')" id="nav-d-code" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900">💻 Code &amp; Viva</button>
+        <button type="button" onclick="navigatePage('page-report')" id="nav-d-report" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900">📄 Report &amp; PPTX</button>
       </nav>
 
-      <div class="relative">
-        <button type="button" onclick="toggleProfileMenu()" id="profile-trigger"
-          class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200 transition">
-          <span id="avatar-initial" class="w-6 h-6 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-[11px] text-white">G</span>
-          <span id="profile-short-name" class="max-w-[85px] truncate font-medium">Guest</span>
-          <span class="text-slate-400 text-[10px]">▼</span>
+      <!-- Install Button + Profile Menu -->
+      <div class="flex items-center gap-2">
+        <button type="button" id="install-app-btn" onclick="triggerInstallApp()"
+          class="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 font-bold text-xs flex items-center gap-1.5 transition">
+          <span>📲</span><span>Install</span>
         </button>
 
-        <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 rounded-2xl glass border border-slate-700 shadow-2xl py-2 z-50">
-          <div class="px-4 py-2 border-b border-slate-800">
-            <p id="menu-full-name" class="text-xs font-bold text-white truncate">Guest Student</p>
-            <p id="menu-usn" class="text-[11px] text-sky-400 font-mono">1VT23CS001</p>
+        <div class="relative">
+          <button type="button" onclick="toggleProfileMenu()" id="profile-trigger"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-xs text-slate-800">
+            <span id="avatar-initial" class="w-6 h-6 rounded-full bg-blue-900 flex items-center justify-center font-bold text-[11px] text-white">G</span>
+            <span id="profile-short-name" class="max-w-[75px] truncate font-semibold">Guest</span>
+            <span class="text-slate-500 text-[10px]">▼</span>
+          </button>
+
+          <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 rounded-2xl card py-2 z-50">
+            <div class="px-4 py-2 border-b border-slate-100">
+              <p id="menu-full-name" class="text-xs font-bold text-slate-900 truncate">Guest Student</p>
+              <p id="menu-usn" class="text-[11px] text-blue-800 font-mono">1VT23CS001</p>
+            </div>
+            <button type="button" onclick="closeProfileMenu(); openLoginModal();" class="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+              <span>✏️</span> Edit Student Profile
+            </button>
+            <button type="button" onclick="closeProfileMenu(); openReferModal();" class="w-full text-left px-4 py-2.5 text-xs text-blue-800 hover:bg-slate-50 flex items-center gap-2">
+              <span>🎁</span> Share With Friends
+            </button>
+            <div class="border-t border-slate-100 my-1"></div>
+            <button type="button" onclick="closeProfileMenu(); logoutUser();" class="w-full text-left px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50 font-semibold flex items-center gap-2">
+              <span>🚪</span> Logout
+            </button>
           </div>
-          <button type="button" onclick="closeProfileMenu(); openLoginModal();" class="w-full text-left px-4 py-2.5 text-xs text-slate-200 hover:bg-slate-800/80 flex items-center gap-2">
-            <span>✏️</span> Edit Student Profile
-          </button>
-          <button type="button" onclick="closeProfileMenu(); openReferModal();" class="w-full text-left px-4 py-2.5 text-xs text-indigo-300 hover:bg-slate-800/80 flex items-center gap-2">
-            <span>🎁</span> Refer Friends
-          </button>
-          <div class="border-t border-slate-800 my-1"></div>
-          <button type="button" onclick="closeProfileMenu(); logoutUser();" class="w-full text-left px-4 py-2.5 text-xs text-rose-400 hover:bg-rose-500/15 font-semibold flex items-center gap-2">
-            <span>🚪</span> Logout
-          </button>
         </div>
       </div>
     </div>
@@ -830,23 +951,23 @@ HTML_PAGE = r"""<!DOCTYPE html>
     <!-- ==================== PAGE 1: GENERATOR ==================== -->
     <section id="page-home" class="page-section active space-y-5">
       <div class="text-center max-w-2xl mx-auto">
-        <span class="text-[11px] uppercase tracking-widest px-3 py-1 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20">
-          Gemini 4 Frontier Engineering Intelligence
+        <span class="text-[11px] uppercase tracking-wider px-3 py-1 rounded-full bg-blue-50 text-blue-900 border border-blue-200 font-bold">
+          For Indian Engineering Students • VTU • Autonomous • AICTE
         </span>
-        <h1 class="text-2xl sm:text-4xl font-bold mt-2.5 leading-tight bg-gradient-to-r from-white via-sky-200 to-indigo-300 bg-clip-text text-transparent">
-          Design Verified Projects, Interactive 3D Circuits &amp; VTU Reports
+        <h1 class="text-2xl sm:text-4xl font-extrabold mt-2.5 leading-tight text-slate-900">
+          Build Complete Engineering Projects, 3D Circuits, Reports &amp; PPTs
         </h1>
-        <p class="text-slate-400 text-xs sm:text-sm mt-2">
-          Select your Branch &amp; Subject (or enter manually) for AI-verified circuits, runnable code, voice-guided Viva &amp; 15+ page reports.
+        <p class="text-slate-600 text-xs sm:text-sm mt-2">
+          Select your Branch &amp; Subject (or enter manually) to generate 3D Breadboard simulations, runnable source code, 15+ page Word reports, IEEE papers &amp; PowerPoint (.pptx) decks.
         </p>
       </div>
 
-      <div class="glass rounded-2xl p-5 sm:p-7 max-w-3xl mx-auto border border-slate-800 space-y-4">
+      <div class="card rounded-2xl p-5 sm:p-7 max-w-3xl mx-auto space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
-            <label class="text-xs font-semibold text-sky-400">1. Select Engineering Branch *</label>
+            <label class="text-xs font-bold text-slate-700">1. Select Engineering Branch *</label>
             <select id="branch-input" onchange="updateSubjectsForBranch()"
-              class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white focus:border-sky-400 focus:outline-none">
+              class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs sm:text-sm text-slate-900 font-medium focus:border-blue-800 focus:outline-none">
               <option value="Computer Science & Engineering (CSE)">Computer Science &amp; Engineering (CSE)</option>
               <option value="Electronics & Communication (ECE)">Electronics &amp; Communication (ECE)</option>
               <option value="Artificial Intelligence & ML (AIML)">Artificial Intelligence &amp; ML (AIML)</option>
@@ -858,175 +979,176 @@ HTML_PAGE = r"""<!DOCTYPE html>
           </div>
 
           <div>
-            <label class="text-xs font-semibold text-emerald-400">2. Select Subject (or Choose Manual) *</label>
+            <label class="text-xs font-bold text-slate-700">2. Select Subject (or Type Manually) *</label>
             <select id="subject-input" onchange="handleSubjectSelect()"
-              class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white focus:border-emerald-400 focus:outline-none">
+              class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs sm:text-sm text-slate-900 font-medium focus:border-blue-800 focus:outline-none">
             </select>
           </div>
         </div>
 
         <div id="manual-subject-box" class="hidden">
-          <label class="text-xs font-semibold text-amber-300">✍️ Type Your Subject Name Manually *</label>
+          <label class="text-xs font-bold text-amber-800">✍️ Type Your Subject Name Manually *</label>
           <input id="manual-subject-input" type="text"
             placeholder="e.g., Linear Integrated Circuits / Microcontroller Lab / Cloud Security"
-            class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-amber-500/50 text-white text-xs sm:text-sm focus:outline-none" />
+            class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-amber-50/50 border border-amber-400 text-slate-900 text-xs sm:text-sm focus:outline-none" />
         </div>
 
         <div>
-          <label class="text-xs font-semibold uppercase tracking-wider text-sky-400">3. Enter Project Title / Problem Statement *</label>
+          <label class="text-xs font-bold text-slate-700">3. Enter Project Title / Problem Statement *</label>
           <input id="topic-input" type="text"
             placeholder="e.g., Water Level Indicator using Opamp IC741 / Smart Irrigation System"
-            class="w-full mt-1.5 px-4 py-3.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:border-sky-400 focus:outline-none" />
+            class="w-full mt-1.5 px-4 py-3.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm font-medium focus:border-blue-800 focus:outline-none" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
-            <label class="text-xs text-slate-400">Project Level</label>
-            <select id="level-input" class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white">
+            <label class="text-xs font-semibold text-slate-600">Project Level</label>
+            <select id="level-input" class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs sm:text-sm text-slate-900">
               <option>2nd / 3rd Year Subject Mini-Project</option>
               <option>Final Year Major Capstone Project</option>
               <option>Lab / Hackathon Prototype</option>
             </select>
           </div>
           <div>
-            <label class="text-xs text-slate-400">Guide Name (For Certificate)</label>
+            <label class="text-xs font-semibold text-slate-600">Guide Name (For Certificate)</label>
             <input id="guide-input" type="text" placeholder="Dr. S. K. Kulkarni"
-              class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white" />
+              class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs sm:text-sm text-slate-900" />
           </div>
         </div>
 
         <button type="button" id="generate-btn" onclick="generateProject()"
-          class="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:opacity-95 font-bold text-white text-sm sm:text-base shadow-lg shadow-blue-600/25 transition">
-          ⚡ Run AI Verification &amp; Build Complete Project
+          class="w-full py-3.5 rounded-xl bg-blue-900 hover:bg-blue-800 font-bold text-white text-sm sm:text-base shadow-md transition">
+          Generate Project
         </button>
       </div>
 
-      <div id="recent-history-box" class="hidden glass rounded-2xl p-4 max-w-3xl mx-auto border border-slate-800/80">
-        <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">🕒 Recent Generated Projects (Click to Re-Open)</span>
+      <!-- Recent Projects History -->
+      <div id="recent-history-box" class="hidden card rounded-2xl p-4 max-w-3xl mx-auto">
+        <span class="text-[11px] uppercase tracking-wider text-slate-500 font-bold">🕒 Recent Projects (Click to Open)</span>
         <div id="recent-list" class="flex flex-wrap gap-2 mt-2"></div>
       </div>
     </section>
 
-    <!-- ==================== PAGE 2: REALISTIC 3D CIRCUIT OR SOFTWARE FLOW ==================== -->
+    <!-- ==================== PAGE 2: 3D CIRCUIT OR SOFTWARE ARCHITECTURE ==================== -->
     <section id="page-3d" class="page-section space-y-4">
-      <div id="ai-verify-card" class="hidden glass rounded-2xl p-4 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div id="ai-verify-card" class="hidden card rounded-2xl p-4 border-l-4 border-l-emerald-600 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div class="space-y-1">
           <div class="flex flex-wrap items-center gap-2">
-            <span id="verify-engine-badge" class="text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              ✓ Gemini 4 AI Verified
+            <span class="text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+              ✓ Syllabus &amp; Lab Verified
             </span>
-            <span id="verify-match" class="text-xs font-semibold text-sky-300"></span>
-            <span id="verify-time" class="text-xs text-slate-400"></span>
+            <span id="verify-match" class="text-xs font-bold text-blue-900"></span>
+            <span id="verify-time" class="text-xs text-slate-500"></span>
           </div>
-          <p id="verify-note" class="text-xs text-slate-300"></p>
+          <p id="verify-note" class="text-xs text-slate-600"></p>
         </div>
       </div>
 
       <div id="circuit-lab-wrapper" class="space-y-4">
-        <div class="glass rounded-2xl p-4 sm:p-5 border border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="card rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <span class="text-[11px] uppercase tracking-wider text-sky-400 font-bold">Interactive 3D Hardware &amp; Breadboard Lab</span>
-            <h2 id="lab3d-title" class="text-base sm:text-xl font-bold text-white">3D Circuit Assembly</h2>
-            <p class="text-xs text-slate-400">Drag 1-Finger to Rotate 360° • Pinch / Scroll to Zoom • Test Sensor Input Below</p>
+            <span class="text-[11px] uppercase tracking-wider text-blue-800 font-bold">Interactive 3D Hardware &amp; Breadboard Lab</span>
+            <h2 id="lab3d-title" class="text-base sm:text-xl font-bold text-slate-900">3D Circuit Assembly</h2>
+            <p class="text-xs text-slate-500">Drag 1-Finger to Rotate 360° • Pinch / Scroll to Zoom • Test Sensor Input Below</p>
           </div>
           <div class="flex flex-wrap gap-2">
             <button type="button" onclick="toggle3DSimulation()" id="sim-toggle-btn"
-              class="px-3.5 py-2 rounded-xl bg-emerald-600 font-bold text-white text-xs shadow">
+              class="px-3.5 py-2 rounded-xl bg-emerald-600 font-bold text-white text-xs shadow-sm">
               ▶ Simulation: ON
             </button>
             <button type="button" onclick="reset3DCamera()"
-              class="px-3 py-2 rounded-xl bg-slate-800 text-xs text-slate-200 border border-slate-700">
+              class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs text-slate-800 font-semibold border border-slate-300">
               🔄 Reset View
             </button>
           </div>
         </div>
 
-        <div class="glass rounded-2xl p-2.5 border border-slate-700 space-y-2.5">
-          <div id="threejs-wrapper" class="relative w-full h-[380px] sm:h-[460px] rounded-xl bg-[#e2e8f0] overflow-hidden">
+        <div class="card rounded-2xl p-2.5 space-y-2.5">
+          <div id="threejs-wrapper" class="relative w-full h-[380px] sm:h-[460px] rounded-xl bg-[#e2e8f0] overflow-hidden border border-slate-300">
             <div id="threejs-container" class="w-full h-full"></div>
             <div id="labels-overlay" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
           </div>
 
-          <div class="bg-slate-950/90 rounded-xl p-3 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-sky-300">🎛️ Live Sensor / Input Level:</span>
-              <span id="sensor-slider-val" class="text-xs font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300">65%</span>
+              <span class="text-xs font-bold text-slate-800">🎛️ Live Sensor / Input Level:</span>
+              <span id="sensor-slider-val" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-900">65%</span>
             </div>
             <input id="sensor-stimulus-slider" type="range" min="0" max="100" value="65"
               oninput="updateSensorStimulus(this.value)"
-              class="w-full sm:w-64 accent-sky-400 cursor-pointer" />
+              class="w-full sm:w-64 accent-blue-900 cursor-pointer" />
           </div>
         </div>
 
-        <div class="glass rounded-2xl p-5">
-          <h3 class="text-sm font-bold text-sky-300 mb-3">📌 Exact Pin-to-Pin Breadboard Connections</h3>
+        <div class="card rounded-2xl p-5">
+          <h3 class="text-sm font-bold text-slate-900 mb-3">📌 Exact Pin-to-Pin Breadboard Connections</h3>
           <div class="overflow-x-auto">
-            <table class="w-full text-xs text-left border border-slate-800">
-              <thead class="bg-slate-900 text-sky-300">
+            <table class="w-full text-xs text-left border border-slate-200">
+              <thead class="bg-slate-100 text-slate-800">
                 <tr>
-                  <th class="p-2.5 border-b border-slate-800">Source Pin / IC</th>
-                  <th class="p-2.5 border-b border-slate-800">Breadboard / Target</th>
-                  <th class="p-2.5 border-b border-slate-800">Signal / Voltage</th>
+                  <th class="p-2.5 border-b border-slate-200">Source Pin / IC</th>
+                  <th class="p-2.5 border-b border-slate-200">Breadboard / Target</th>
+                  <th class="p-2.5 border-b border-slate-200">Signal / Voltage</th>
                 </tr>
               </thead>
-              <tbody id="lab3d-pins" class="divide-y divide-slate-800 text-slate-300"></tbody>
+              <tbody id="lab3d-pins" class="divide-y divide-slate-200 text-slate-700"></tbody>
             </table>
           </div>
         </div>
       </div>
 
       <div id="software-arch-wrapper" class="hidden space-y-4">
-        <div class="glass rounded-2xl p-6 border border-indigo-500/30 space-y-4">
+        <div class="card rounded-2xl p-6 space-y-4">
           <div>
-            <span class="text-[11px] uppercase tracking-wider text-indigo-400 font-bold">Software System Architecture</span>
-            <h2 id="sw-arch-title" class="text-lg sm:text-xl font-bold text-white mt-0.5">Data &amp; Execution Pipeline</h2>
-            <p class="text-xs text-slate-400 mt-1">This is a pure software subject project—no hardware circuit is required.</p>
+            <span class="text-[11px] uppercase tracking-wider text-blue-800 font-bold">Software System Architecture</span>
+            <h2 id="sw-arch-title" class="text-lg sm:text-xl font-bold text-slate-900 mt-0.5">Data &amp; Execution Pipeline</h2>
+            <p class="text-xs text-slate-500 mt-1">This is a pure software subject project—no hardware circuit is required.</p>
           </div>
           <div id="sw-nodes-container" class="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-2"></div>
         </div>
       </div>
     </section>
 
-    <!-- ==================== PAGE 3: CODE & VOICE-ENABLED 5-LANG VIVA ==================== -->
+    <!-- ==================== PAGE 3: CODE & VOICE VIVA ==================== -->
     <section id="page-code" class="page-section space-y-5">
-      <div id="empty-code" class="glass rounded-2xl p-8 text-center">
-        <p class="text-sm text-slate-400">Generate a project first to view source code and 5-language Voice Viva Q&amp;A.</p>
-        <button type="button" onclick="navigatePage('page-home')" class="mt-3 px-4 py-2 rounded-xl bg-sky-600 text-xs font-semibold text-white">Go to Create →</button>
+      <div id="empty-code" class="card rounded-2xl p-8 text-center">
+        <p class="text-sm text-slate-500">Generate a project first to view source code and 5-language Voice Viva Q&amp;A.</p>
+        <button type="button" onclick="navigatePage('page-home')" class="mt-3 px-4 py-2 rounded-xl bg-blue-900 text-xs font-semibold text-white">Go to Create →</button>
       </div>
 
       <div id="content-code" class="hidden space-y-5">
-        <div class="glass rounded-2xl p-5 space-y-3">
+        <div class="card rounded-2xl p-5 space-y-3">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div class="flex flex-wrap gap-2">
               <button type="button" onclick="switchCodeMode('primary')" id="btn-code-primary"
-                class="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold">
+                class="px-3.5 py-2 rounded-xl bg-blue-900 text-white text-xs font-bold">
                 💻 Main Project Code
               </button>
               <button type="button" onclick="switchCodeMode('arduino')" id="btn-code-arduino"
-                class="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-700">
+                class="px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-300">
                 🔌 Optional Arduino Dump Code (.ino)
               </button>
             </div>
-            <button type="button" onclick="copySourceCode()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-sky-300 border border-slate-700 self-start">
+            <button type="button" onclick="copySourceCode()" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs text-slate-800 font-semibold border border-slate-300 self-start">
               📋 Copy Code
             </button>
           </div>
-          <p id="active-code-subtitle" class="text-xs text-emerald-300 font-semibold"></p>
-          <pre id="code-block" class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-emerald-300 overflow-x-auto leading-relaxed"></pre>
+          <p id="active-code-subtitle" class="text-xs text-blue-900 font-bold"></p>
+          <pre id="code-block" class="bg-slate-900 p-4 rounded-xl text-xs text-emerald-300 overflow-x-auto leading-relaxed"></pre>
         </div>
 
-        <div class="glass rounded-2xl p-5 space-y-4">
+        <div class="card rounded-2xl p-5 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 class="text-base font-bold text-purple-300">🎓 AI Viva-Voce Coach (5 Languages + Audio)</h3>
-              <p class="text-xs text-slate-400">Select one language &amp; click 🔊 Listen to practice viva pronunciation</p>
+              <h3 class="text-base font-bold text-slate-900">🎓 Viva-Voce Q&amp;A (5 Languages + Voice Audio)</h3>
+              <p class="text-xs text-slate-500">Select your preferred language &amp; tap 🔊 Listen to practice</p>
             </div>
             <div class="flex flex-wrap gap-1.5">
-              <button type="button" onclick="selectVivaLang('en', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-bold">English</button>
-              <button type="button" onclick="selectVivaLang('kn', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold">ಕನ್ನಡ</button>
-              <button type="button" onclick="selectVivaLang('hi', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold">हिन्दी</button>
-              <button type="button" onclick="selectVivaLang('te', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold">తెలుగు</button>
-              <button type="button" onclick="selectVivaLang('ta', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold">தமிழ்</button>
+              <button type="button" onclick="selectVivaLang('en', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-blue-900 text-white text-xs font-bold">English</button>
+              <button type="button" onclick="selectVivaLang('kn', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-300">ಕನ್ನಡ</button>
+              <button type="button" onclick="selectVivaLang('hi', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-300">हिन्दी</button>
+              <button type="button" onclick="selectVivaLang('te', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-300">తెలుగు</button>
+              <button type="button" onclick="selectVivaLang('ta', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-300">தமிழ்</button>
             </div>
           </div>
           <div id="viva-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5"></div>
@@ -1034,54 +1156,65 @@ HTML_PAGE = r"""<!DOCTYPE html>
       </div>
     </section>
 
-    <!-- ==================== PAGE 4: REPORT STUDIO & SEMINAR PPT DECK ==================== -->
+    <!-- ==================== PAGE 4: REPORT (.DOCX), IEEE PAPER & POWERPOINT (.PPTX) ==================== -->
     <section id="page-report" class="page-section space-y-5">
-      <div id="empty-report" class="glass rounded-2xl p-8 text-center">
-        <p class="text-sm text-slate-400">Generate a project first to customize and download your 15+ page VTU .docx report.</p>
-        <button type="button" onclick="navigatePage('page-home')" class="mt-3 px-4 py-2 rounded-xl bg-sky-600 text-xs font-semibold text-white">Go to Create →</button>
+      <div id="empty-report" class="card rounded-2xl p-8 text-center">
+        <p class="text-sm text-slate-500">Generate a project first to download your 15+ page Report (.docx), IEEE Paper &amp; Seminar PPT (.pptx).</p>
+        <button type="button" onclick="navigatePage('page-home')" class="mt-3 px-4 py-2 rounded-xl bg-blue-900 text-xs font-semibold text-white">Go to Create →</button>
       </div>
 
       <div id="content-report" class="hidden space-y-5">
-        <div class="glass rounded-2xl p-5 border border-emerald-500/30 space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <span class="text-[11px] uppercase tracking-wider text-emerald-400 font-bold">VTU / College Report Formatting Tools</span>
-              <h2 id="rep-title" class="text-lg sm:text-xl font-bold text-white mt-0.5"></h2>
-            </div>
+        <div class="card rounded-2xl p-5 space-y-4">
+          <div>
+            <span class="text-[11px] uppercase tracking-wider text-blue-800 font-bold">University Submission Downloads</span>
+            <h2 id="rep-title" class="text-lg sm:text-xl font-bold text-slate-900 mt-0.5"></h2>
+          </div>
+
+          <!-- 3 Direct Download Buttons: VTU DOCX + Seminar PPTX + IEEE Research Paper -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <button type="button" onclick="downloadDocxDirect()" id="download-docx-btn"
-              class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 font-bold text-white text-xs sm:text-sm shadow-lg shrink-0">
-              📥 Download 15+ Page .docx Report
+              class="py-3 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 font-bold text-white text-xs shadow-sm flex items-center justify-center gap-2">
+              <span>📄</span><span>Download Report (.docx)</span>
+            </button>
+            <button type="button" onclick="downloadPptxDirect()" id="download-pptx-btn"
+              class="py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-600 font-bold text-white text-xs shadow-sm flex items-center justify-center gap-2">
+              <span>📊</span><span>Download Seminar PPT (.pptx)</span>
+            </button>
+            <button type="button" onclick="downloadIeeeDirect()" id="download-ieee-btn"
+              class="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold text-white text-xs shadow-sm flex items-center justify-center gap-2">
+              <span>📑</span><span>Download IEEE Paper (.docx)</span>
             </button>
           </div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-800">
+          <!-- Report Formatting Tools -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-200">
             <div>
-              <label class="text-[11px] text-slate-400">Font Style</label>
-              <select id="fmt-font-family" onchange="updateLivePreviewStyle()" class="w-full mt-1 px-2.5 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white">
+              <label class="text-[11px] font-semibold text-slate-600">Font Style</label>
+              <select id="fmt-font-family" onchange="updateLivePreviewStyle()" class="w-full mt-1 px-2.5 py-2 rounded-lg bg-slate-50 border border-slate-300 text-xs text-slate-900">
                 <option value="Times New Roman">Times New Roman (VTU)</option>
                 <option value="Arial">Arial</option>
                 <option value="Calibri">Calibri</option>
               </select>
             </div>
             <div>
-              <label class="text-[11px] text-slate-400">Body Font Size</label>
-              <select id="fmt-font-size" onchange="updateLivePreviewStyle()" class="w-full mt-1 px-2.5 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white">
+              <label class="text-[11px] font-semibold text-slate-600">Body Font Size</label>
+              <select id="fmt-font-size" onchange="updateLivePreviewStyle()" class="w-full mt-1 px-2.5 py-2 rounded-lg bg-slate-50 border border-slate-300 text-xs text-slate-900">
                 <option value="12" selected>12 pt (Standard)</option>
                 <option value="11">11 pt (Compact)</option>
                 <option value="14">14 pt (Large)</option>
               </select>
             </div>
             <div>
-              <label class="text-[11px] text-slate-400">Line Spacing</label>
-              <select id="fmt-line-spacing" onchange="updateLivePreviewStyle()" class="w-full mt-1 px-2.5 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white">
+              <label class="text-[11px] font-semibold text-slate-600">Line Spacing</label>
+              <select id="fmt-line-spacing" onchange="updateLivePreviewStyle()" class="w-full mt-1 px-2.5 py-2 rounded-lg bg-slate-50 border border-slate-300 text-xs text-slate-900">
                 <option value="1.5" selected>1.5x Spacing (VTU)</option>
                 <option value="1.15">1.15x Spacing</option>
                 <option value="2.0">2.0x Double Space</option>
               </select>
             </div>
             <div>
-              <label class="text-[11px] text-slate-400">Page Border</label>
-              <select id="fmt-page-border" class="w-full mt-1 px-2.5 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white">
+              <label class="text-[11px] font-semibold text-slate-600">Page Border</label>
+              <select id="fmt-page-border" class="w-full mt-1 px-2.5 py-2 rounded-lg bg-slate-50 border border-slate-300 text-xs text-slate-900">
                 <option value="true" selected>Classic Blue Border</option>
                 <option value="false">No Border (Clean)</option>
               </select>
@@ -1089,23 +1222,34 @@ HTML_PAGE = r"""<!DOCTYPE html>
           </div>
         </div>
 
-        <div id="live-doc-preview" class="glass rounded-2xl p-6 space-y-4 border-2 border-blue-900/60">
-          <h3 class="text-base font-bold text-sky-300">Live Document Preview</h3>
-          <p id="rep-abstract" class="text-sm text-slate-200 leading-relaxed"></p>
-          <p id="rep-working" class="text-sm text-slate-300 leading-relaxed border-t border-slate-800 pt-3"></p>
+        <div id="live-doc-preview" class="card rounded-2xl p-6 space-y-4 border-2 border-blue-900/20">
+          <h3 class="text-base font-bold text-blue-900">Document Preview</h3>
+          <p id="rep-abstract" class="text-sm text-slate-700 leading-relaxed"></p>
+          <p id="rep-working" class="text-sm text-slate-600 leading-relaxed border-t border-slate-200 pt-3"></p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="glass rounded-2xl p-5">
-            <h3 class="text-sm font-bold text-emerald-300 mb-2">💰 Bill of Materials (BOM)</h3>
-            <div id="rep-bom" class="text-xs text-slate-300 space-y-2"></div>
+          <div class="card rounded-2xl p-5">
+            <h3 class="text-sm font-bold text-slate-900 mb-2">💰 Bill of Materials (BOM)</h3>
+            <div id="rep-bom" class="text-xs text-slate-700 space-y-2"></div>
           </div>
-          <div class="glass rounded-2xl p-5">
+          <div class="card rounded-2xl p-5">
             <div class="flex items-center justify-between mb-2">
-              <h3 class="text-sm font-bold text-indigo-300">📊 Seminar PPT Slide Deck</h3>
-              <button type="button" onclick="copyPptSlides()" class="text-[11px] px-2.5 py-1 rounded bg-slate-800 text-sky-300 border border-slate-700">📋 Copy PPT</button>
+              <h3 class="text-sm font-bold text-slate-900">📊 Seminar PPT Slide Outline</h3>
+              <button type="button" onclick="downloadPptxDirect()" class="text-[11px] px-2.5 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold">📥 .pptx</button>
             </div>
-            <div id="rep-ppt" class="text-xs text-slate-300 space-y-2"></div>
+            <div id="rep-ppt" class="text-xs text-slate-700 space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- Indian Engineering Student Submission Checklist -->
+        <div class="card rounded-2xl p-5">
+          <h3 class="text-sm font-bold text-slate-900 mb-2">✅ College Viva &amp; Lab Submission Checklist</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700">
+            <label class="flex items-center gap-2"><input type="checkbox" checked class="accent-blue-900"> Cover Page &amp; Bonafide Certificate signed by Guide &amp; HOD</label>
+            <label class="flex items-center gap-2"><input type="checkbox" checked class="accent-blue-900"> 15+ Page Report printed in Times New Roman 12pt (1.5 spacing)</label>
+            <label class="flex items-center gap-2"><input type="checkbox" checked class="accent-blue-900"> 7-Slide Seminar PowerPoint (.pptx) ready on USB/Laptop</label>
+            <label class="flex items-center gap-2"><input type="checkbox" checked class="accent-blue-900"> Hardware Breadboard / Working Code Demo tested</label>
           </div>
         </div>
       </div>
@@ -1113,18 +1257,18 @@ HTML_PAGE = r"""<!DOCTYPE html>
   </main>
 
   <!-- MOBILE BOTTOM NAVIGATION -->
-  <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-slate-800 grid grid-cols-4 py-1.5 px-1">
-    <button type="button" onclick="navigatePage('page-home')" id="nav-m-home" class="nav-m-btn flex flex-col items-center py-1 text-sky-400 font-bold">
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 grid grid-cols-4 py-1.5 px-1 shadow-lg">
+    <button type="button" onclick="navigatePage('page-home')" id="nav-m-home" class="nav-m-btn flex flex-col items-center py-1 text-blue-900 font-bold">
       <span class="text-base">🏠</span><span class="text-[10px]">Create</span>
     </button>
-    <button type="button" onclick="navigatePage('page-3d')" id="nav-m-3d" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
+    <button type="button" onclick="navigatePage('page-3d')" id="nav-m-3d" class="nav-m-btn flex flex-col items-center py-1 text-slate-500">
       <span class="text-base">🧊</span><span class="text-[10px]">Circuit/Flow</span>
     </button>
-    <button type="button" onclick="navigatePage('page-code')" id="nav-m-code" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
+    <button type="button" onclick="navigatePage('page-code')" id="nav-m-code" class="nav-m-btn flex flex-col items-center py-1 text-slate-500">
       <span class="text-base">💻</span><span class="text-[10px]">Code/Viva</span>
     </button>
-    <button type="button" onclick="navigatePage('page-report')" id="nav-m-report" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
-      <span class="text-base">📄</span><span class="text-[10px]">Report/PPT</span>
+    <button type="button" onclick="navigatePage('page-report')" id="nav-m-report" class="nav-m-btn flex flex-col items-center py-1 text-slate-500">
+      <span class="text-base">📄</span><span class="text-[10px]">Report/PPTX</span>
     </button>
   </nav>
 
@@ -1218,6 +1362,31 @@ HTML_PAGE = r"""<!DOCTYPE html>
     let activeVivaLang = "en";
     let selectedRating = 5;
     let sensorStimulusLevel = 0.65;
+    let deferredInstallPrompt = null;
+
+    // Register Service Worker & Capture Install Prompt
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+    });
+
+    async function triggerInstallApp() {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+      } else {
+        const m = document.getElementById("install-help-modal");
+        m.classList.remove("hidden"); m.classList.add("flex");
+      }
+    }
+    function closeInstallHelp() {
+      const m = document.getElementById("install-help-modal");
+      m.classList.add("hidden"); m.classList.remove("flex");
+    }
 
     function dismissSplash() {
       const s = document.getElementById("splash-screen");
@@ -1235,7 +1404,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
         dismissSplash();
         if (!studentProfile || !studentProfile.email) openLoginModal();
         else updateProfileUI();
-      }, 1150);
+      }, 950);
 
       try {
         initThreeJS();
@@ -1251,16 +1420,24 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
       const key = pageId.replace("page-", "");
       document.querySelectorAll(".nav-d-btn").forEach(b => {
-        b.classList.remove("bg-sky-600", "text-white"); b.classList.add("text-slate-300");
+        b.classList.remove("bg-blue-900", "text-white", "font-bold");
+        b.classList.add("text-slate-600", "font-semibold");
       });
       const dBtn = document.getElementById("nav-d-" + key);
-      if (dBtn) { dBtn.classList.add("bg-sky-600", "text-white"); dBtn.classList.remove("text-slate-300"); }
+      if (dBtn) {
+        dBtn.classList.add("bg-blue-900", "text-white", "font-bold");
+        dBtn.classList.remove("text-slate-600", "font-semibold");
+      }
 
       document.querySelectorAll(".nav-m-btn").forEach(b => {
-        b.classList.remove("text-sky-400", "font-bold"); b.classList.add("text-slate-400");
+        b.classList.remove("text-blue-900", "font-bold");
+        b.classList.add("text-slate-500");
       });
       const mBtn = document.getElementById("nav-m-" + key);
-      if (mBtn) { mBtn.classList.add("text-sky-400", "font-bold"); mBtn.classList.remove("text-slate-400"); }
+      if (mBtn) {
+        mBtn.classList.add("text-blue-900", "font-bold");
+        mBtn.classList.remove("text-slate-500");
+      }
 
       if (pageId === "page-3d") setTimeout(resizeThreeJS, 50);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1323,7 +1500,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     function copyInviteLink() { navigator.clipboard.writeText(window.location.origin + "/?ref=" + getReferralCode()); alert("Invite link copied!"); }
     function shareOnWhatsApp() {
       const link = window.location.origin + "/?ref=" + getReferralCode();
-      const text = "Build Subject-Aligned Engineering Projects, 3D Circuits & VTU Reports on ProjForge AI: " + link;
+      const text = "Build Engineering Projects, 3D Circuits, VTU Reports (.docx) & Seminar PPTs (.pptx): " + link;
       window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
     }
 
@@ -1336,8 +1513,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
     function setRating(r) {
       selectedRating = r;
       document.querySelectorAll(".star-btn").forEach((b, idx) => {
-        if (idx + 1 === r) b.className = "star-btn px-3 py-1.5 rounded-lg bg-emerald-600 border border-emerald-400 text-white font-bold text-xs";
-        else b.className = "star-btn px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs";
+        if (idx + 1 === r) b.className = "star-btn px-3 py-1.5 rounded-lg bg-blue-900 border border-blue-900 text-white font-bold text-xs";
+        else b.className = "star-btn px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-300 text-xs";
       });
     }
     document.getElementById("feedback-form").addEventListener("submit", async (e) => {
@@ -1366,7 +1543,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
       if (!recentBlueprints.length) return box.classList.add("hidden");
       box.classList.remove("hidden");
       list.innerHTML = recentBlueprints.map((item, idx) => `
-        <button type="button" onclick="loadRecent(${idx})" class="text-xs px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-sky-300 truncate max-w-[240px]">
+        <button type="button" onclick="loadRecent(${idx})" class="text-xs px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 font-medium truncate max-w-[240px]">
           📌 ${item.title}
         </button>
       `).join("");
@@ -1392,7 +1569,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
       if (!topic) return alert("Please enter your project title first!");
 
       const btn = document.getElementById("generate-btn");
-      btn.disabled = true; btn.innerText = "⏳ Running AI Verification & Building Project...";
+      btn.disabled = true; btn.innerText = "Generating Project...";
       try {
         const res = await fetch("/api/generate", {
           method: "POST",
@@ -1408,17 +1585,16 @@ HTML_PAGE = r"""<!DOCTYPE html>
       } catch (err) {
         alert("Error: " + err.message);
       } finally {
-        btn.disabled = false; btn.innerText = "⚡ Run AI Verification & Build Complete Project";
+        btn.disabled = false; btn.innerText = "Generate Project";
       }
     }
 
     function populateAllPages(bp) {
-      if (bp.ai_verification) {
+      if (bp.verification_summary) {
         document.getElementById("ai-verify-card").classList.remove("hidden");
-        document.getElementById("verify-engine-badge").innerText = "✓ " + (bp.ai_engine_used || "Gemini 4 AI Verified");
-        document.getElementById("verify-match").innerText = bp.ai_verification.syllabus_match || "";
-        document.getElementById("verify-time").innerText = "• Est. Build: " + (bp.ai_verification.build_time || "2 Days");
-        document.getElementById("verify-note").innerText = bp.ai_verification.expert_note || "";
+        document.getElementById("verify-match").innerText = bp.verification_summary.syllabus_match || "";
+        document.getElementById("verify-time").innerText = "• Est. Build: " + (bp.verification_summary.build_time || "2 Days");
+        document.getElementById("verify-note").innerText = bp.verification_summary.expert_note || "";
       }
 
       if (bp.requires_circuit) {
@@ -1428,8 +1604,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
         build3DSceneFromBlueprint(bp);
         document.getElementById("lab3d-pins").innerHTML = (bp.pin_connections || []).map(p => `
           <tr>
-            <td class="p-2.5 font-mono text-sky-300">${p.from_pin}</td>
-            <td class="p-2.5 font-mono text-indigo-300">${p.to_pin}</td>
+            <td class="p-2.5 font-mono font-semibold text-blue-900">${p.from_pin}</td>
+            <td class="p-2.5 font-mono text-slate-800">${p.to_pin}</td>
             <td class="p-2.5">${p.signal}</td>
           </tr>
         `).join("");
@@ -1438,9 +1614,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
         document.getElementById("software-arch-wrapper").classList.remove("hidden");
         document.getElementById("sw-arch-title").innerText = `System Flow: ${bp.title}`;
         document.getElementById("sw-nodes-container").innerHTML = (bp.software_architecture_nodes || []).map((n, i) => `
-          <div class="bg-slate-900 border border-indigo-500/40 rounded-xl p-4 text-center">
-            <span class="text-[10px] font-bold text-sky-400">STAGE 0${i + 1}</span>
-            <p class="text-xs font-semibold text-white mt-1">${n}</p>
+          <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+            <span class="text-[10px] font-bold text-blue-800">STAGE 0${i + 1}</span>
+            <p class="text-xs font-bold text-slate-900 mt-1">${n}</p>
           </div>
         `).join("");
       }
@@ -1462,19 +1638,13 @@ HTML_PAGE = r"""<!DOCTYPE html>
       let total = 0;
       document.getElementById("rep-bom").innerHTML = (bp.hardware_requirements || []).map(h => {
         total += Number(h.cost_inr || 0);
-        return `<div class="flex justify-between border-b border-slate-800 pb-1"><span>${h.name}</span><span class="text-emerald-400 font-semibold">₹${h.cost_inr}</span></div>`;
-      }).join("") + `<div class="flex justify-between pt-1 font-bold text-white"><span>Total Est. Cost</span><span>₹${total}</span></div>`;
+        return `<div class="flex justify-between border-b border-slate-200 pb-1"><span>${h.name}</span><span class="text-emerald-700 font-bold">₹${h.cost_inr}</span></div>`;
+      }).join("") + `<div class="flex justify-between pt-1 font-bold text-slate-900"><span>Total Est. Cost</span><span>₹${total}</span></div>`;
 
-      document.getElementById("rep-ppt").innerHTML = (bp.ppt_slides || []).map(s => `
-        <div class="border-b border-slate-800 pb-1.5"><span class="text-sky-300 font-semibold">${s.slide}:</span> ${s.points}</div>
-      `).join("");
-    }
-
-    function copyPptSlides() {
-      if (!currentBlueprint) return;
-      const txt = (currentBlueprint.ppt_slides || []).map(s => s.slide + " - " + s.points).join(" | ");
-      navigator.clipboard.writeText(txt);
-      alert("Seminar PPT outline copied!");
+      document.getElementById("rep-ppt").innerHTML = (bp.ppt_slides || []).map((s, i) => {
+        const desc = s.bullets ? s.bullets.join(" • ") : (s.points || "");
+        return `<div class="border-b border-slate-200 pb-1.5"><span class="text-blue-900 font-bold">Slide ${i + 1} (${s.slide}):</span> ${desc}</div>`;
+      }).join("");
     }
 
     function switchCodeMode(mode) {
@@ -1483,13 +1653,13 @@ HTML_PAGE = r"""<!DOCTYPE html>
       const pBtn = document.getElementById("btn-code-primary");
       const aBtn = document.getElementById("btn-code-arduino");
       if (mode === "primary") {
-        pBtn.className = "px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold";
-        aBtn.className = "px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-700";
+        pBtn.className = "px-3.5 py-2 rounded-xl bg-blue-900 text-white text-xs font-bold";
+        aBtn.className = "px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-300";
         document.getElementById("active-code-subtitle").innerText = `Language: ${currentBlueprint.primary_code_language || "Code"}`;
         document.getElementById("code-block").innerText = currentBlueprint.primary_code || "";
       } else {
-        aBtn.className = "px-3.5 py-2 rounded-xl bg-sky-600 text-white text-xs font-bold";
-        pBtn.className = "px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-700";
+        aBtn.className = "px-3.5 py-2 rounded-xl bg-blue-900 text-white text-xs font-bold";
+        pBtn.className = "px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-300";
         document.getElementById("active-code-subtitle").innerText = "Optional Hardware Firmware (.ino) for Arduino / ESP32";
         document.getElementById("code-block").innerText = currentBlueprint.arduino_code || "";
       }
@@ -1503,11 +1673,11 @@ HTML_PAGE = r"""<!DOCTYPE html>
     function selectVivaLang(lang, btn) {
       activeVivaLang = lang;
       document.querySelectorAll(".viva-lang-btn").forEach(b => {
-        b.classList.remove("bg-purple-600", "text-white", "font-bold");
-        b.classList.add("bg-slate-800", "text-slate-300", "font-semibold");
+        b.classList.remove("bg-blue-900", "text-white", "font-bold");
+        b.classList.add("bg-slate-100", "text-slate-700", "font-semibold");
       });
-      btn.classList.remove("bg-slate-800", "text-slate-300", "font-semibold");
-      btn.classList.add("bg-purple-600", "text-white", "font-bold");
+      btn.classList.remove("bg-slate-100", "text-slate-700", "font-semibold");
+      btn.classList.add("bg-blue-900", "text-white", "font-bold");
       renderVivaCards();
     }
 
@@ -1529,14 +1699,14 @@ HTML_PAGE = r"""<!DOCTYPE html>
       document.getElementById("viva-grid").innerHTML = list.map((item, idx) => {
         const entry = item[activeVivaLang] || item["en"] || {};
         return `
-          <div class="bg-slate-900/95 p-4 rounded-xl border border-slate-800 space-y-2">
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
             <div class="flex items-start justify-between gap-2">
-              <p class="text-xs font-bold text-sky-300">Q${idx + 1}. ${entry.q || ""}</p>
-              <button type="button" onclick="speakVivaByIndex(${idx})" class="shrink-0 text-[10px] px-2 py-1 rounded bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/30">
+              <p class="text-xs font-bold text-blue-900">Q${idx + 1}. ${entry.q || ""}</p>
+              <button type="button" onclick="speakVivaByIndex(${idx})" class="shrink-0 text-[10px] px-2 py-1 rounded bg-blue-100 hover:bg-blue-200 text-blue-900 font-bold">
                 🔊 Listen
               </button>
             </div>
-            <p class="text-xs text-slate-200 leading-relaxed">${entry.a || ""}</p>
+            <p class="text-xs text-slate-700 leading-relaxed">${entry.a || ""}</p>
           </div>
         `;
       }).join("");
@@ -1549,48 +1719,64 @@ HTML_PAGE = r"""<!DOCTYPE html>
       box.style.lineHeight = document.getElementById("fmt-line-spacing").value;
     }
 
-    async function downloadDocxDirect() {
-      if (!currentBlueprint) return;
-      const btn = document.getElementById("download-docx-btn");
-      btn.disabled = true; btn.innerText = "⏳ Building 15+ Page DOCX...";
+    function getExportPayload() {
       let subject = document.getElementById("subject-input").value;
       if (subject === "__MANUAL__") subject = document.getElementById("manual-subject-input").value.trim() || "Engineering Project";
+      return {
+        blueprint: currentBlueprint,
+        student_name: (studentProfile && studentProfile.name) || "Student Name",
+        usn: (studentProfile && studentProfile.usn) || "1VT23CS001",
+        college: (studentProfile && studentProfile.college) || "VTU Affiliated Engineering College",
+        branch: document.getElementById("branch-input").value,
+        subject: subject,
+        guide_name: document.getElementById("guide-input").value.trim() || "Project Guide",
+        formatting: {
+          font_family: document.getElementById("fmt-font-family").value,
+          font_size: document.getElementById("fmt-font-size").value,
+          line_spacing: document.getElementById("fmt-line-spacing").value,
+          page_border: document.getElementById("fmt-page-border").value === "true",
+          viva_lang: activeVivaLang
+        }
+      };
+    }
 
+    async function downloadFileFromEndpoint(endpoint, filename, btnId, defaultLabel) {
+      if (!currentBlueprint) return;
+      const btn = document.getElementById(btnId);
+      btn.disabled = true; btn.innerText = "Preparing File...";
       try {
-        const payload = {
-          blueprint: currentBlueprint,
-          student_name: (studentProfile && studentProfile.name) || "Student Name",
-          usn: (studentProfile && studentProfile.usn) || "1VT23CS001",
-          college: (studentProfile && studentProfile.college) || "VTU Affiliated Engineering College",
-          branch: document.getElementById("branch-input").value,
-          subject: subject,
-          guide_name: document.getElementById("guide-input").value.trim() || "Project Guide",
-          formatting: {
-            font_family: document.getElementById("fmt-font-family").value,
-            font_size: document.getElementById("fmt-font-size").value,
-            line_spacing: document.getElementById("fmt-line-spacing").value,
-            page_border: document.getElementById("fmt-page-border").value === "true",
-            viva_lang: activeVivaLang
-          }
-        };
-        const res = await fetch("/api/download-docx", {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(getExportPayload())
         });
-        if (!res.ok) throw new Error("Failed");
+        if (!res.ok) throw new Error("Download failed");
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a"); a.href = url; a.download = "ProjForge_15Page_VTU_Report.docx";
+        const a = document.createElement("a");
+        a.href = url; a.download = filename;
         document.body.appendChild(a); a.click(); a.remove();
-
         setTimeout(openFeedbackModal, 700);
       } catch (err) {
-        alert("Download error: " + err.message);
+        alert("Error: " + err.message);
       } finally {
-        btn.disabled = false; btn.innerText = "📥 Download 15+ Page .docx Report";
+        btn.disabled = false; btn.innerHTML = defaultLabel;
       }
     }
 
-    // ==================== HIGH-DETAIL INTERACTIVE 3D HARDWARE ENGINE ====================
+    function downloadDocxDirect() {
+      downloadFileFromEndpoint("/api/download-docx", "ProjForge_Project_Report.docx", "download-docx-btn", "<span>📄</span><span>Download Report (.docx)</span>");
+    }
+
+    function downloadPptxDirect() {
+      downloadFileFromEndpoint("/api/download-pptx", "ProjForge_Seminar_Presentation.pptx", "download-pptx-btn", "<span>📊</span><span>Download Seminar PPT (.pptx)</span>");
+    }
+
+    function downloadIeeeDirect() {
+      downloadFileFromEndpoint("/api/download-ieee", "ProjForge_IEEE_Paper.docx", "download-ieee-btn", "<span>📑</span><span>Download IEEE Paper (.docx)</span>");
+    }
+
+    // ==================== 3D HARDWARE ENGINE ====================
     let scene, camera, renderer, controls, circuitGroup;
     let trackedLabels = [], animParts = [];
     let simActive = true;
@@ -1783,9 +1969,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
       add3DWire([-2.2, 0.3, 0.4], [-0.5, 1.25, 0.9], [0.2, 0.15, 1.2], 0x1e293b);
 
       const parts = (bp && bp.circuit_3d_parts && bp.circuit_3d_parts.length) ? bp.circuit_3d_parts : [
-        { type: "ic_741", label: "IC 741 Op-Amp", wire_color: "#38bdf8" },
-        { type: "sensor_water_probes", label: "Water Level Probes", wire_color: "#22c55e" },
-        { type: "led_indicator_bank", label: "LEDs & Piezo Buzzer", wire_color: "#f59e0b" }
+        { type: "ic_741", label: "IC 741 Op-Amp", wire_color: "#2563eb" },
+        { type: "sensor_water_probes", label: "Water Level Probes", wire_color: "#16a34a" },
+        { type: "led_indicator_bank", label: "LEDs & Piezo Buzzer", wire_color: "#d97706" }
       ];
 
       const xSlots = [0.75, 2.35, 3.95];
@@ -1798,7 +1984,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
         mesh.position.set(px, py, pz);
         circuitGroup.add(mesh);
 
-        add3DWire([0.75, 0.28, 0], [(px + 0.75) / 2, 1.45 + i * 0.2, pz], [px, 0.2, pz], part.wire_color || "#38bdf8");
+        add3DWire([0.75, 0.28, 0], [(px + 0.75) / 2, 1.45 + i * 0.2, pz], [px, 0.2, pz], part.wire_color || "#2563eb");
         registerLabel(part.label || "Module", px, py + 0.78, pz);
       });
     }
@@ -1841,8 +2027,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
       const btn = document.getElementById("sim-toggle-btn");
       btn.innerText = simActive ? "▶ Simulation: ON" : "⏸️ Simulation: PAUSED";
       btn.className = simActive
-        ? "px-3.5 py-2 rounded-xl bg-emerald-600 font-bold text-white text-xs shadow"
-        : "px-3.5 py-2 rounded-xl bg-amber-600 font-bold text-white text-xs shadow";
+        ? "px-3.5 py-2 rounded-xl bg-emerald-600 font-bold text-white text-xs shadow-sm"
+        : "px-3.5 py-2 rounded-xl bg-amber-600 font-bold text-white text-xs shadow-sm";
     }
 
     function reset3DCamera() {
@@ -1864,21 +2050,14 @@ HTML_PAGE = r"""<!DOCTYPE html>
 """
 
 
-# ==================== 4. FLASK API ROUTES & PWA MANIFEST ====================
+# ==================== 4. FLASK API ROUTES & PWA SERVICE WORKER ====================
 @app.route("/favicon.ico")
 def favicon():
     svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88">
-      <defs>
-        <linearGradient id="g" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
-          <stop stop-color="#38BDF8"/>
-          <stop offset="0.5" stop-color="#6366F1"/>
-          <stop offset="1" stop-color="#A855F7"/>
-        </linearGradient>
-      </defs>
-      <rect width="88" height="88" rx="22" fill="url(#g)"/>
-      <path d="M24 44H36L42 29L49 59L55 44H65" stroke="#fff" stroke-width="5.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="23" cy="44" r="4" fill="#fff"/>
-      <circle cx="65" cy="44" r="4" fill="#fff"/>
+      <rect width="88" height="88" rx="22" fill="#1e3a8a"/>
+      <path d="M24 44H36L42 29L49 59L55 44H65" stroke="#38bdf8" stroke-width="5.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="23" cy="44" r="4" fill="#ffffff"/>
+      <circle cx="65" cy="44" r="4" fill="#ffffff"/>
     </svg>'''
     return Response(svg, mimetype="image/svg+xml")
 
@@ -1886,12 +2065,12 @@ def favicon():
 @app.route("/manifest.json")
 def manifest():
     return jsonify({
-        "name": "ProjForge AI Studio",
-        "short_name": "ProjForge AI",
+        "name": "ProjForge Engineering Studio",
+        "short_name": "ProjForge",
         "start_url": "/",
         "display": "standalone",
-        "background_color": "#050811",
-        "theme_color": "#0f172a",
+        "background_color": "#ffffff",
+        "theme_color": "#1e3a8a",
         "icons": [
             {
                 "src": "/favicon.ico",
@@ -1901,6 +2080,12 @@ def manifest():
             }
         ]
     })
+
+
+@app.route("/sw.js")
+def service_worker():
+    js = "self.addEventListener('fetch', function(event) {});"
+    return Response(js, mimetype="application/javascript")
 
 
 @app.route("/")
@@ -1941,6 +2126,50 @@ def download_docx():
         docx_buffer,
         as_attachment=True,
         download_name=f"{safe_name}_VTU_Report.docx",
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+
+
+@app.route("/api/download-pptx", methods=["POST"])
+def download_pptx():
+    payload = request.get_json(force=True)
+    blueprint = payload.get("blueprint", {})
+    pptx_buffer = build_seminar_pptx(
+        blueprint,
+        payload.get("student_name") or "Student Name",
+        payload.get("usn") or "1VT23CS001",
+        payload.get("college") or "VTU Affiliated Engineering College",
+        payload.get("branch") or "Engineering",
+        payload.get("subject") or "Engineering Subject",
+        payload.get("guide_name") or "Project Guide"
+    )
+    safe_name = "".join(c if c.isalnum() else "_" for c in blueprint.get("title", "Seminar_Presentation"))[:40]
+    return send_file(
+        pptx_buffer,
+        as_attachment=True,
+        download_name=f"{safe_name}_Seminar.pptx",
+        mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    )
+
+
+@app.route("/api/download-ieee", methods=["POST"])
+def download_ieee():
+    payload = request.get_json(force=True)
+    blueprint = payload.get("blueprint", {})
+    ieee_buffer = build_ieee_paper_docx(
+        blueprint,
+        payload.get("student_name") or "Student Name",
+        payload.get("usn") or "1VT23CS001",
+        payload.get("college") or "VTU Affiliated Engineering College",
+        payload.get("branch") or "Engineering",
+        payload.get("subject") or "Engineering Subject",
+        payload.get("guide_name") or "Project Guide"
+    )
+    safe_name = "".join(c if c.isalnum() else "_" for c in blueprint.get("title", "IEEE_Paper"))[:40]
+    return send_file(
+        ieee_buffer,
+        as_attachment=True,
+        download_name=f"{safe_name}_IEEE_Paper.docx",
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
 

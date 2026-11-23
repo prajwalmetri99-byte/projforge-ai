@@ -1,5 +1,6 @@
 flask
-python-docx
 razorpay
 requests
+python-docx
+python-pptx
 gunicorn
