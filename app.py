@@ -1,709 +1,1162 @@
-import base64
-import hashlib
-import hmac
 import io
-import json
 import os
-import socket
-import threading
-import time
-import urllib.request
-import webbrowser
-import zipfile
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from socketserver import ThreadingMixIn
-from xml.sax.saxutils import escape
+import re
+import json
+from datetime import datetime, timezone, timedelta
+from flask import Flask, render_template_string, request, jsonify, send_file
+import razorpay
+import requests
+from docx import Document
+from docx.shared import Inches, Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.oxml import parse_xml
+from docx.oxml.ns import nsdecls
 
-DB_FILE = "users_db.json"
-LAUNCH_FILE = "launch_config.json"
-PAY_LOG_FILE = "payments_log.json"
+app = Flask(__name__)
+
+# ==================== CONFIGURATION ====================
+LAUNCH_START_STR = os.environ.get("LAUNCH_START_ISO", "2026-11-23T12:00:00+00:00")
+FREE_HOURS = int(os.environ.get("FREE_LAUNCH_HOURS", "48"))
 PRICE_INR = 49
-FREE_DAYS = 2
-LOCK = threading.Lock()
 
-# Render Environment Variables ನಲ್ಲಿ RAZORPAY_KEY_ID ಮತ್ತು RAZORPAY_KEY_SECRET ಹಾಕಬೇಕು
-RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
-RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "").strip()
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "").strip()
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+
+rzp_client = None
+if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET:
+    rzp_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 
-def get_launch_end_ts():
-    if os.path.exists(LAUNCH_FILE):
+def is_free_launch_active():
+    try:
+        start_dt = datetime.fromisoformat(LAUNCH_START_STR)
+        end_dt = start_dt + timedelta(hours=FREE_HOURS)
+        now_dt = datetime.now(timezone.utc)
+        if now_dt < end_dt:
+            return True, int((end_dt - now_dt).total_seconds())
+    except Exception:
+        pass
+    return False, 0
+
+
+# ==================== 1. GEMINI AI ENGINE (VIA DIRECT REST API) ====================
+def generate_project_blueprint(topic, branch, level):
+    if GEMINI_API_KEY:
         try:
-            with open(LAUNCH_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if "end_ts" in data:
-                    return float(data["end_ts"])
-        except Exception:
-            pass
-    end_ts = time.time() + (FREE_DAYS * 86400)
-    with open(LAUNCH_FILE, "w", encoding="utf-8") as f:
-        json.dump({"end_ts": end_ts}, f, indent=2)
-    return end_ts
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+            prompt = f"""
+You are a senior Indian Engineering Professor (VTU / Autonomous curriculum) and Principal Systems Architect.
+Generate a comprehensive engineering mini-project blueprint in strict JSON format for:
+- Project Title / Topic: "{topic}"
+- Engineering Branch: "{branch}"
+- Academic Level: "{level}"
+
+Return ONLY valid JSON matching this exact schema (no markdown fences, no extra text):
+{{
+  "title": "Formal Engineering Project Title",
+  "tagline": "One-line technical summary",
+  "abstract": "Detailed 250-word academic abstract covering problem statement, proposed methodology, core technologies, and measurable outcomes.",
+  "problem_statement": "Detailed 160-word problem definition explaining existing drawbacks in real-world scenarios.",
+  "objectives": ["Objective 1", "Objective 2", "Objective 3", "Objective 4", "Objective 5"],
+  "literature_survey": [
+    {{"paper": "Author et al. (2024) - Title", "summary": "Key finding and limitation addressed by our system."}},
+    {{"paper": "Author et al. (2025) - Title", "summary": "Key finding and limitation addressed by our system."}},
+    {{"paper": "Author et al. (2026) - Title", "summary": "Key finding and limitation addressed by our system."}}
+  ],
+  "hardware_requirements": [
+    {{"name": "Component/Hardware 1", "spec": "Detailed technical specification", "cost_inr": 450}},
+    {{"name": "Component/Hardware 2", "spec": "Detailed technical specification", "cost_inr": 250}},
+    {{"name": "Component/Hardware 3", "spec": "Detailed technical specification", "cost_inr": 180}},
+    {{"name": "Component/Hardware 4", "spec": "Detailed technical specification", "cost_inr": 120}}
+  ],
+  "software_requirements": [
+    "OS: Windows 11 / Ubuntu 22.04 LTS",
+    "IDE / Tool: VS Code / Arduino IDE / MATLAB / Python 3.11",
+    "Libraries / Frameworks: Relevant libraries for this project"
+  ],
+  "block_diagram_nodes": [
+    "Input / Sensor Layer",
+    "Signal Conditioning",
+    "Core Controller / AI Unit",
+    "Decision & Control Logic",
+    "Output Actuators / Cloud UI"
+  ],
+  "pin_connections": [
+    {{"from_pin": "Controller Pin / Module A", "to_pin": "Sensor/Module B Pin", "signal": "VCC / GND / Digital / I2C / API"}},
+    {{"from_pin": "Controller Pin / Module C", "to_pin": "Sensor/Module D Pin", "signal": "Signal Type"}},
+    {{"from_pin": "Controller Pin / Module E", "to_pin": "Output/Actuator Pin", "signal": "PWM / UART / HTTP"}},
+    {{"from_pin": "Power Rail (5V/3.3V)", "to_pin": "All Peripherals", "signal": "Regulated DC Power"}}
+  ],
+  "working_principle": "Detailed 350-word step-by-step explanation of system architecture, data flow, algorithm/circuit operation, and fail-safe mechanisms.",
+  "source_code_language": "Python or C++",
+  "source_code": "Complete, clean, well-commented working source code (minimum 65-95 lines) ready to compile or execute.",
+  "results_and_discussion": "Detailed 200-word analysis of testing parameters, accuracy/latency metrics, and real-world performance observations.",
+  "advantages": ["Advantage 1", "Advantage 2", "Advantage 3", "Advantage 4"],
+  "applications": ["Application 1", "Application 2", "Application 3", "Application 4"],
+  "future_scope": "150-word discussion on scalability, IoT/Cloud upgrades, and industrial deployment.",
+  "references": [
+    "[1] IEEE Standard / Research Paper 1 relevant to topic",
+    "[2] Technical Reference Book / Datasheet 2",
+    "[3] IEEE / Springer Journal Article 3 (2025)"
+  ],
+  "viva_qa": [
+    {{"q_en": "Viva Question 1 in English?", "a_en": "Clear technical answer in English.", "q_kn": "ಕನ್ನಡದಲ್ಲಿ ವೈವಾ ಪ್ರಶ್ನೆ 1?", "a_kn": "ಕನ್ನಡದಲ್ಲಿ ಸ್ಪಷ್ಟ ಉತ್ತರ."}},
+    {{"q_en": "Viva Question 2?", "a_en": "Answer 2", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 2?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 2"}},
+    {{"q_en": "Viva Question 3?", "a_en": "Answer 3", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 3?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 3"}},
+    {{"q_en": "Viva Question 4?", "a_en": "Answer 4", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 4?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 4"}},
+    {{"q_en": "Viva Question 5?", "a_en": "Answer 5", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 5?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 5"}},
+    {{"q_en": "Viva Question 6?", "a_en": "Answer 6", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 6?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 6"}},
+    {{"q_en": "Viva Question 7?", "a_en": "Answer 7", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 7?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 7"}},
+    {{"q_en": "Viva Question 8?", "a_en": "Answer 8", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 8?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 8"}},
+    {{"q_en": "Viva Question 9?", "a_en": "Answer 9", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 9?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 9"}},
+    {{"q_en": "Viva Question 10?", "a_en": "Answer 10", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 10?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 10"}},
+    {{"q_en": "Viva Question 11?", "a_en": "Answer 11", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 11?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 11"}},
+    {{"q_en": "Viva Question 12?", "a_en": "Answer 12", "q_kn": "ಕನ್ನಡ ಪ್ರಶ್ನೆ 12?", "a_kn": "ಕನ್ನಡ ಉತ್ತರ 12"}}
+  ]
+}}
+"""
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"responseMimeType": "application/json", "temperature": 0.4}
+            }
+            resp = requests.post(url, json=payload, timeout=45)
+            if resp.status_code == 200:
+                res_json = resp.json()
+                raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                raw_text = re.sub(r"^```json\s*|\s*```$", "", raw_text, flags=re.MULTILINE)
+                return json.loads(raw_text)
+        except Exception as e:
+            print("Gemini API fallback:", e)
+
+    return _fallback_blueprint(topic, branch, level)
 
 
-LAUNCH_END_TS = get_launch_end_ts()
-
-
-def is_free_period():
-    return time.time() < LAUNCH_END_TS
-
-
-def load_json(path, default):
-    if os.path.exists(path):
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return default
-    return default
-
-
-def save_json(path, data):
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-
-
-def create_razorpay_order(amount_inr):
-    url = "https://api.razorpay.com/v1/orders"
-    payload = json.dumps({
-        "amount": int(amount_inr) * 100,
-        "currency": "INR",
-        "receipt": f"pf_{int(time.time())}"
-    }).encode("utf-8")
-    auth = base64.b64encode(f"{RAZORPAY_KEY_ID}:{RAZORPAY_KEY_SECRET}".encode("utf-8")).decode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=payload,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Basic {auth}"
-        },
-        method="POST"
-    )
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read().decode("utf-8"))
-
-
-def verify_razorpay_signature(order_id, payment_id, signature):
-    msg = f"{order_id}|{payment_id}".encode("utf-8")
-    expected = hmac.new(RAZORPAY_KEY_SECRET.encode("utf-8"), msg, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, signature)
-
-
-def generate_project_bundle(mode, title, branch, budget, extra_notes):
-    budget = max(200, int(budget or 600))
-    t_clean = title.strip() or "Smart Automated IoT System"
-    low = t_clean.lower()
-
-    is_software = any(k in low for k in ("python", "ai", "ml", "app", "web", "attendance", "detection", "data", "software"))
-    is_network = any(k in low for k in ("rc", "rlc", "filter", "network", "circuit", "amplifier", "rectifier", "aelic", "voltage"))
-
-    if is_software:
-        comps = [
-            {"name": "PC / Laptop with Python 3.x & VS Code", "cost": 0},
-            {"name": "Open-Source Python Libraries (CSV, Math, JSON)", "cost": 0},
-            {"name": "Report & Documentation Setup", "cost": min(budget, 100)},
-        ]
-        sim_type = "software"
-        code = (
-            f"# Ready-to-Run Python Implementation: {t_clean}\n"
-            f"# Branch: {branch} | Budget: Rs.{budget}\n"
-            "import json\n\n"
-            "def run_system(values):\n"
-            f"    print('Running {t_clean}...')\n"
-            "    avg = round(sum(values) / max(1, len(values)), 2)\n"
-            "    status = 'ALERT TRIGGERED' if avg > 50 else 'NORMAL'\n"
-            "    return {'project': '" + t_clean.replace("'", "") + "', 'reading': avg, 'status': status}\n\n"
-            "if __name__ == '__main__':\n"
-            "    print(json.dumps(run_system([45, 72, 68, 55]), indent=2))\n"
-        )
-    elif is_network:
-        r_cost = min(150, int(budget * 0.25))
-        c_cost = min(250, int(budget * 0.45))
-        comps = [
-            {"name": "Precision Resistor Kit (1kΩ – 10kΩ)", "cost": r_cost},
-            {"name": "Electrolytic / Ceramic Capacitor Kit (10µF)", "cost": c_cost},
-            {"name": "Breadboard, Jumper Wires & Probes", "cost": max(50, budget - r_cost - c_cost)},
-        ]
-        sim_type = "network"
-        code = (
-            f"# Transient & Frequency Response Analyzer: {t_clean}\n"
-            "import math\n\n"
-            "R, C, Vin = 10000.0, 10e-6, 5.0\n"
-            "tau = R * C\n"
-            "fc = 1.0 / (2.0 * math.pi * R * C)\n"
-            "print(f'Tau = {tau:.3f}s | Cutoff Freq = {fc:.2f} Hz')\n"
-            "for ms in range(0, 500, 100):\n"
-            "    t = ms / 1000.0\n"
-            "    print(f't={t:.2f}s -> Vout = {Vin * (1 - math.exp(-t / tau)):.3f} V')\n"
-        )
-    else:
-        mcu = ("Arduino Nano + USB Cable", 240) if budget <= 650 else ("Arduino Uno R3 + USB Cable", 420)
-        rem = max(120, budget - mcu[1])
-        s1 = int(rem * 0.55)
-        comps = [
-            {"name": mcu[0], "cost": mcu[1]},
-            {"name": f"Sensor Module for {t_clean}", "cost": s1},
-            {"name": "Breadboard, LEDs, 220Ω Resistors & Wires", "cost": rem - s1},
-        ]
-        sim_type = "arduino"
-        code = (
-            f"// Ready-to-Dump Arduino Code: {t_clean}\n"
-            f"// Budget Target: Rs.{budget}\n"
-            "const int sensorPin = A0;\n"
-            "const int triggerPin = 2;\n"
-            "const int outPin = 9;\n\n"
-            "void setup() {\n"
-            "  pinMode(triggerPin, INPUT);\n"
-            "  pinMode(outPin, OUTPUT);\n"
-            "  Serial.begin(9600);\n"
-            "}\n\n"
-            "void loop() {\n"
-            "  int val = analogRead(sensorPin);\n"
-            "  if (val < 450 || digitalRead(triggerPin) == LOW) {\n"
-            "    digitalWrite(outPin, HIGH);\n"
-            "  } else {\n"
-            "    digitalWrite(outPin, LOW);\n"
-            "  }\n"
-            "  delay(150);\n"
-            "}\n"
-        )
-
-    total_cost = sum(c["cost"] for c in comps)
-    spec = f" Custom Specifications: {extra_notes}." if extra_notes.strip() else ""
-
+def _fallback_blueprint(topic, branch, level):
+    clean_title = topic.strip().title() or "Smart Automated Embedded & AI Monitoring System"
     return {
-        "title": t_clean,
-        "branch": branch,
-        "budget": budget,
-        "total_cost": total_cost,
-        "sim_type": sim_type,
-        "components": comps,
-        "viva": {
-            "kn": f"'{t_clean}' ಪ್ರಾಜೆಕ್ಟ್ ಅನ್ನು ₹{budget} ಬಜೆಟ್ ಒಳಗೆ ವಿನ್ಯಾಸಗೊಳಿಸಲಾಗಿದೆ. ಸೆನ್ಸಾರ್/ಇನ್‌ಪುಟ್ ನಿಂದ ಡೇಟಾ ಪಡೆದು ಆಟೋಮ್ಯಾಟಿಕ್ ಆಗಿ ಔಟ್‌ಪುಟ್ ನಿಯಂತ್ರಿಸುತ್ತದೆ.{spec}",
-            "en": f"'{t_clean}' is engineered within a ₹{budget} budget. It reads input signals, checks threshold conditions, and drives outputs automatically.{spec}",
-            "hi": f"'{t_clean}' प्रोजेक्ट को ₹{budget} के बजट में तैयार किया गया है। यह इनपुट सिग्नल प्रोसेस करके आउटपुट को नियंत्रित करता है।"
-        },
-        "intro": f"This project presents the design and implementation of '{t_clean}' in the {branch} domain, optimized within a student budget of Rs.{budget}.{spec}",
-        "working": f"The '{t_clean}' system captures input signals, processes threshold logic via the controller, and triggers the output stage with minimal power consumption.",
-        "conclusion": f"The '{t_clean}' prototype was successfully simulated and verified within Rs.{total_cost}.",
-        "code": code
+        "title": clean_title,
+        "tagline": f"An intelligent {branch} engineering solution for {level} academic implementation.",
+        "abstract": (
+            f"This project presents the design, simulation, and prototype implementation of '{clean_title}' "
+            f"tailored for {branch} engineering applications. Conventional systems suffer from manual latency, "
+            "high power overhead, and lack of real-time telemetry. To overcome these limitations, the proposed "
+            "architecture integrates precision sensing, deterministic microcontroller/algorithmic processing, and "
+            "automated actuation with real-time status logging. Experimental validation confirms a 94.6% operational "
+            "accuracy with sub-200ms response latency, making it cost-effective and scalable for campus and industrial deployment."
+        ),
+        "problem_statement": (
+            f"Existing manual and legacy approaches related to {clean_title} require continuous human supervision, "
+            "are prone to human error, and lack predictive fault alerts. Developing an automated, low-cost, and "
+            "modular system bridges the gap between theoretical engineering principles and practical reliability."
+        ),
+        "objectives": [
+            f"To design a modular system architecture for {clean_title}.",
+            "To minimize power consumption and hardware footprint while maintaining high accuracy.",
+            "To implement real-time threshold detection and automated alert/control mechanisms.",
+            "To validate system performance under varying load and environmental test cases.",
+            "To prepare standardized VTU/Autonomous technical documentation and reproducible source code."
+        ],
+        "literature_survey": [
+            {"paper": "R. Kumar et al. (2024) - IEEE Access", "summary": "Proposed a baseline monitoring model; lacked low-power edge optimization."},
+            {"paper": "S. Kulkarni & P. Rao (2025) - Springer", "summary": "Demonstrated sensor fusion techniques; high BOM cost limited student prototyping."},
+            {"paper": "A. Sharma et al. (2026) - Elsevier", "summary": "Introduced real-time analytics; our work simplifies deployment with open-source firmware."}
+        ],
+        "hardware_requirements": [
+            {"name": "ESP32 / Arduino Uno R3 Microcontroller", "spec": "32-bit Dual-Core / ATmega328P, 5V/3.3V logic", "cost_inr": 480},
+            {"name": "Primary Sensor / Transducer Module", "spec": "High-precision industrial grade sensor array", "cost_inr": 320},
+            {"name": "0.96-inch I2C OLED Display & Buzzer", "spec": "128x64 SSD1306 display + 5V active piezo", "cost_inr": 220},
+            {"name": "Relay Driver & Regulated Power Supply", "spec": "5V 2A SMPS adapter + optocoupler relay", "cost_inr": 250}
+        ],
+        "software_requirements": [
+            "Operating System: Windows 10/11 or Ubuntu Linux",
+            "Development Environment: Arduino IDE 2.3 / VS Code / Python 3.11",
+            "Libraries: Wire.h, Adafruit_SSD1306, NumPy / Serial Monitor"
+        ],
+        "block_diagram_nodes": [
+            "Regulated Power (5V/3.3V)",
+            "Multi-Sensor Input Layer",
+            "Core MCU / AI Processor",
+            "Threshold Control Engine",
+            "OLED, Buzzer & Actuator"
+        ],
+        "pin_connections": [
+            {"from_pin": "MCU GPIO D2 / SDA", "to_pin": "Sensor Data / OLED SDA", "signal": "Digital / I2C Data"},
+            {"from_pin": "MCU GPIO D3 / SCL", "to_pin": "OLED Clock Pin (SCL)", "signal": "I2C Clock"},
+            {"from_pin": "MCU GPIO D8", "to_pin": "Relay Module IN1", "signal": "Active-HIGH Control"},
+            {"from_pin": "MCU 5V & GND", "to_pin": "Sensor & Display VCC/GND", "signal": "DC Power Rail"}
+        ],
+        "working_principle": (
+            f"The working of '{clean_title}' is organized into three synchronized stages: Data Acquisition, "
+            "Signal Processing, and Automated Actuation. During initialization, the controller calibrates baseline "
+            "sensor offsets and establishes I2C communication with the status display. In the continuous loop phase, "
+            "raw physical parameters are sampled every 100 milliseconds, filtered using a moving-average noise-reduction "
+            "algorithm, and compared against pre-calibrated safety thresholds. Whenever an anomaly or trigger condition "
+            "is detected, the controller immediately energizes the output driver/actuator, triggers the audio-visual alert, "
+            "and logs telemetry frames over the serial/cloud interface."
+        ),
+        "source_code_language": "C++ (Embedded Firmware)",
+        "source_code": f"""// ============================================================================
+// Project: {clean_title}
+// Branch : {branch} | Level: {level}
+// Generated by ProjForge AI
+// ============================================================================
+
+#include <Wire.h>
+
+#define SENSOR_PIN A0
+#define RELAY_PIN  8
+#define BUZZER_PIN 9
+#define THRESHOLD  520
+
+float filteredValue = 0.0;
+const float ALPHA = 0.25;
+
+void setup() {{
+  Serial.begin(115200);
+  pinMode(SENSOR_PIN, INPUT);
+  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+
+  digitalWrite(RELAY_PIN, LOW);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  Serial.println("SYSTEM INITIALIZED: {clean_title}");
+  delay(1000);
+}}
+
+void loop() {{
+  int rawReading = analogRead(SENSOR_PIN);
+  filteredValue = (ALPHA * rawReading) + ((1.0 - ALPHA) * filteredValue);
+
+  Serial.print("Raw Sensor: ");
+  Serial.print(rawReading);
+  Serial.print(" | Filtered: ");
+  Serial.println(filteredValue, 2);
+
+  if (filteredValue > THRESHOLD) {{
+    digitalWrite(RELAY_PIN, HIGH);
+    digitalWrite(BUZZER_PIN, HIGH);
+    Serial.println("[ALERT] Threshold Exceeded -> Actuator ON");
+  }} else {{
+    digitalWrite(RELAY_PIN, LOW);
+    digitalWrite(BUZZER_PIN, LOW);
+    Serial.println("[NORMAL] Parameters Within Safe Range");
+  }}
+
+  delay(250);
+}}
+""",
+        "results_and_discussion": (
+            "The prototype was tested across 50 consecutive operational cycles. The moving-average filter reduced "
+            "sensor jitter by 78%, while actuation latency remained consistently under 180 ms. Total bill-of-materials "
+            "cost was kept under Rs. 1,300, demonstrating strong feasibility for student lab demonstrations."
+        ),
+        "advantages": [
+            "Low hardware cost and compact breadboard/PCB footprint",
+            "Fast response latency (< 200 ms) with built-in noise filtering",
+            "Modular architecture easily extendable to IoT cloud dashboards",
+            "User-friendly real-time status visualization"
+        ],
+        "applications": [
+            "Smart Campus & Laboratory Automation",
+            "Industrial Safety & Preventive Maintenance",
+            "Energy Conservation & Resource Monitoring",
+            "Academic Research & Prototyping"
+        ],
+        "future_scope": (
+            "In future iterations, the system can be upgraded with an MQTT cloud broker, mobile push notifications, "
+            "and a lightweight TinyML anomaly prediction model trained on historical sensor logs."
+        ),
+        "references": [
+            "[1] IEEE Std 1451-2024, Standard for Smart Transducer Interface for Sensors and Actuators.",
+            "[2] Muhammad Ali Mazidi, 'Embedded Systems & Microcontroller Architecture', Pearson Education.",
+            "[3] VTU Academic Project Guidelines & Technical Documentation Standards (2025-26)."
+        ],
+        "viva_qa": [
+            {"q_en": "What is the primary objective of your project?", "a_en": f"To automate and optimize {clean_title} with high accuracy and low cost.", "q_kn": "ನಿಮ್ಮ ಪ್ರಾಜೆಕ್ಟ್‌ನ ಮುಖ್ಯ ಉದ್ದೇಶವೇನು?", "a_kn": f"{clean_title} ಅನ್ನು ಕಡಿಮೆ ವೆಚ್ಚದಲ್ಲಿ ಮತ್ತು ಹೆಚ್ಚಿನ ನಿಖರತೆಯೊಂದಿಗೆ ಸ್ವಯಂಚಾಲಿತಗೊಳಿಸುವುದು."},
+            {"q_en": "Why did you choose this specific controller/algorithm?", "a_en": "It offers low power consumption, fast I/O response, and easy library support.", "q_kn": "ನೀವು ಈ ಕಂಟ್ರೋಲರ್/ಅಲ್ಗಾರಿದಮ್ ಅನ್ನು ಏಕೆ ಆಯ್ಕೆ ಮಾಡಿದ್ದೀರಿ?", "a_kn": "ಇದು ಕಡಿಮೆ ವಿದ್ಯುತ್ ಬಳಸುತ್ತದೆ ಮತ್ತು ವೇಗವಾಗಿ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ."},
+            {"q_en": "How do you reduce sensor noise in your system?", "a_en": "By applying a software moving-average filter before threshold comparison.", "q_kn": "ನಿಮ್ಮ ಸಿಸ್ಟಮ್‌ನಲ್ಲಿ ಸೆನ್ಸರ್ ನಾಯ್ಸ್ (Noise) ಹೇಗೆ ಕಡಿಮೆ ಮಾಡುತ್ತೀರಿ?", "a_kn": "ಸಾಫ್ಟ್‌ವೇರ್ ಮೂವಿಂಗ್-ಆವರೇಜ್ ಫಿಲ್ಟರ್ ಬಳಸುವ ಮೂಲಕ ನಾಯ್ಸ್ ಕಡಿಮೆ ಮಾಡಲಾಗುತ್ತದೆ."},
+            {"q_en": "What is the total cost of your prototype?", "a_en": "Approximately Rs. 1,270 including microcontroller, sensors, and power supply.", "q_kn": "ನಿಮ್ಮ ಪ್ರಾಜೆಕ್ಟ್ ಮಾದರಿಯ ಒಟ್ಟು ವೆಚ್ಚ ಎಷ್ಟು?", "a_kn": "ಸುಮಾರು ₹1,270 ವೆಚ್ಚವಾಗುತ್ತದೆ."},
+            {"q_en": "What happens if the power supply fluctuates?", "a_en": "A regulated 5V DC adapter with decoupling capacitors protects the logic circuit.", "q_kn": "ವಿದ್ಯುತ್ ಪೂರೈಕೆಯಲ್ಲಿ ಏರುಪೇರಾದರೆ ಏನಾಗುತ್ತದೆ?", "a_kn": "ರೆಗ್ಯುಲೇಟೆಡ್ 5V DC ಅಡಾಪ್ಟರ್ ಸರ್ಕ್ಯೂಟ್ ಅನ್ನು ಸುರಕ್ಷಿತವಾಗಿಡುತ್ತದೆ."},
+            {"q_en": "How can this project be scaled for real-world industry?", "a_en": "By adding industrial-grade IP65 enclosures, LoRaWAN/Wi-Fi telemetry, and cloud logging.", "q_kn": "ಇದನ್ನು ಕೈಗಾರಿಕಾ ಮಟ್ಟಕ್ಕೆ ಹೇಗೆ ವಿಸ್ತರಿಸಬಹುದು?", "a_kn": "Wi-Fi/IoT ಕ್ಲೌಡ್ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಮತ್ತು ಕೈಗಾರಿಕಾ ಸೆನ್ಸರ್‌ಗಳನ್ನು ಸೇರಿಸುವ ಮೂಲಕ ವಿಸ್ತರಿಸಬಹುದು."},
+            {"q_en": "What is the response time of your system?", "a_en": "Less than 200 milliseconds from sensor trigger to output actuation.", "q_kn": "ನಿಮ್ಮ ಸಿಸ್ಟಮ್‌ನ ರೆಸ್ಪಾನ್ಸ್ ಸಮಯ ಎಷ್ಟು?", "a_kn": "200 ಮಿಲಿಸೆಕೆಂಡ್‌ಗಳಿಗಿಂತ ಕಡಿಮೆ ಸಮಯದಲ್ಲಿ ಪ್ರತಿಕ್ರಿಯಿಸುತ್ತದೆ."},
+            {"q_en": "Which communication protocol is used for the display?", "a_en": "I2C (Inter-Integrated Circuit) protocol using SDA and SCL lines.", "q_kn": "ಡಿಸ್‌ಪ್ಲೇಗಾಗಿ ಯಾವ ಕಮ್ಯುನಿಕೇಷನ್ ಪ್ರೋಟೋಕಾಲ್ ಬಳಸಲಾಗಿದೆ?", "a_kn": "SDA ಮತ್ತು SCL ಲೈನ್‌ಗಳನ್ನು ಹೊಂದಿರುವ I2C ಪ್ರೋಟೋಕಾಲ್ ಬಳಸಲಾಗಿದೆ."},
+            {"q_en": "What are the main limitations of your current prototype?", "a_en": "It currently operates locally without long-range cellular backup.", "q_kn": "ಪ್ರಸ್ತುತ ಮಾದರಿಯ ಮುಖ್ಯ ಮಿತಿಗಳೇನು?", "a_kn": "ಪ್ರಸ್ತುತ ಇದು ಸ್ಥಳೀಯವಾಗಿ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ; ದೀರ್ಘ-ಶ್ರೇಣಿಯ ಕ್ಲೌಡ್ ಬ್ಯಾಕಪ್ ಸೇರಿಸಬಹುದು."},
+            {"q_en": "How did you test and validate the results?", "a_en": "By running 50 repeated test trials and comparing sensor logs against standard instruments.", "q_kn": "ಫಲಿತಾಂಶಗಳನ್ನು ನೀವು ಹೇಗೆ ಪರೀಕ್ಷಿಸಿದ್ದೀರಿ?", "a_kn": "50 ಬಾರಿ ಪರೀಕ್ಷೆ ನಡೆಸಿ ಸ್ಟ್ಯಾಂಡರ್ಡ್ ಮೀಟರ್‌ಗಳೊಂದಿಗೆ ಹೋಲಿಸಿ ದೃಢಪಡಿಸಲಾಗಿದೆ."}
+        ]
     }
 
 
-def build_docx_bytes(proj, cfg):
-    font = cfg.get("font", "Times New Roman")
-    h_size = int(cfg.get("h_size", 14)) * 2
-    b_size = int(cfg.get("b_size", 12)) * 2
-    h_bold = bool(cfg.get("h_bold", True))
-    line_sp = "360" if cfg.get("spacing") == "1.5" else "276"
-    order = cfg.get("order", ["intro", "components", "working", "code", "conclusion"])
+# ==================== 2. 15+ PAGE VTU DOCX REPORT BUILDER ====================
+def _set_cell_shading(cell, fill_hex):
+    shading = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{fill_hex}"/>')
+    cell._tc.get_or_add_tcPr().append(shading)
 
-    student = cfg.get("student", "").strip() or "Student Name"
-    usn = cfg.get("usn", "").strip() or "USN"
-    college = cfg.get("college", "").strip() or "ENGINEERING COLLEGE"
-    guide = cfg.get("guide", "").strip() or "Project Guide"
 
-    def p_xml(text, sz, bold=False, center=False, is_code=False):
-        f_name = "Consolas" if is_code else font
-        b_tag = "<w:b/>" if bold else ""
-        jc_tag = '<w:jc w:val="center"/>' if center else '<w:jc w:val="both"/>'
-        runs = []
-        for idx, line in enumerate(str(text).split("\n")):
-            br = "<w:br/>" if idx > 0 else ""
-            runs.append(
-                f'{br}<w:r><w:rPr><w:rFonts w:ascii="{escape(f_name)}" w:hAnsi="{escape(f_name)}"/>'
-                f'{b_tag}<w:sz w:val="{sz}"/></w:rPr><w:t xml:space="preserve">{escape(line)}</w:t></w:r>'
-            )
-        return f'<w:p><w:pPr>{jc_tag}<w:spacing w:after="140" w:line="{line_sp}" w:lineRule="auto"/></w:pPr>{"".join(runs)}</w:p>'
+def _add_page_border(section):
+    pgBorders = parse_xml(
+        f'<w:pgBorders {nsdecls("w")} w:offsetFrom="page">'
+        '<w:top w:val="single" w:sz="12" w:space="24" w:color="1E3A8A"/>'
+        '<w:left w:val="single" w:sz="12" w:space="24" w:color="1E3A8A"/>'
+        '<w:bottom w:val="single" w:sz="12" w:space="24" w:color="1E3A8A"/>'
+        '<w:right w:val="single" w:sz="12" w:space="24" w:color="1E3A8A"/>'
+        '</w:pgBorders>'
+    )
+    section._sectPr.append(pgBorders)
 
-    body = [
-        p_xml(college.upper(), h_size + 4, bold=True, center=True),
-        p_xml(f"Project Report — {proj['branch']}", b_size, bold=True, center=True),
-        p_xml(proj["title"].upper(), h_size + 2, bold=True, center=True),
-        p_xml(f"By: {student} (USN: {usn}) | Guide: {guide}", b_size, bold=True, center=True),
+
+def _add_heading(doc, text, level=1):
+    p = doc.add_heading(text, level=level)
+    for run in p.runs:
+        run.font.name = "Times New Roman"
+        run.font.color.rgb = RGBColor(20, 45, 110) if level == 1 else RGBColor(30, 64, 140)
+    return p
+
+
+def _add_body(doc, text, bold=False, align=WD_ALIGN_PARAGRAPH.JUSTIFY):
+    p = doc.add_paragraph()
+    p.alignment = align
+    p.paragraph_format.line_spacing = 1.5
+    p.paragraph_format.space_after = Pt(8)
+    run = p.add_run(text)
+    run.font.name = "Times New Roman"
+    run.font.size = Pt(12)
+    run.bold = bold
+    return p
+
+
+def build_vtu_docx(blueprint, student_name, usn, college, branch, guide_name):
+    doc = Document()
+    for section in doc.sections:
+        section.top_margin = Inches(1.0)
+        section.bottom_margin = Inches(1.0)
+        section.left_margin = Inches(1.2)
+        section.right_margin = Inches(1.0)
+        _add_page_border(section)
+
+    title = blueprint.get("title", "Engineering Mini Project")
+    year_str = datetime.now().strftime("%Y-%m")
+
+    # PAGE 1: COVER PAGE
+    for txt, sz, bld, itl, clr in [
+        ("VISVESVARAYA TECHNOLOGICAL UNIVERSITY / AUTONOMOUS\n", 14, True, False, RGBColor(15, 35, 95)),
+        (f"{college.upper()}\nDepartment of {branch}\n\n", 13, True, False, None),
+        ("A MINI-PROJECT REPORT ON\n\n", 12, False, True, None),
+        (f'"{title.upper()}"\n\n', 18, True, False, RGBColor(180, 30, 30)),
+        (f"Submitted in partial fulfillment of the requirements for the award of the degree of\nBACHELOR OF ENGINEERING IN {branch.upper()}\n\nSubmitted By:\n", 12, False, False, None),
+        (f"{student_name.upper()}   (USN: {usn.upper()})\n\n", 13, True, False, None),
+        (f"Under the Guidance of:\nProf. {guide_name}\nDepartment of {branch}\n\nAcademic Year: {year_str}", 12, False, False, None),
+    ]:
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = p.add_run(txt)
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(sz)
+        r.bold = bld
+        r.italic = itl
+        if clr:
+            r.font.color.rgb = clr
+    doc.add_page_break()
+
+    # PAGE 2: CERTIFICATE
+    _add_heading(doc, f"{college.upper()}", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _add_heading(doc, f"Department of {branch}", 2).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _add_heading(doc, "BONAFIDE CERTIFICATE", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _add_body(
+        doc,
+        f'Certified that the Mini-Project work entitled "{title}" is a bonafide work carried out by '
+        f"{student_name} (USN: {usn}), a bonafide student of {college}, in partial fulfillment for the award "
+        f"of Bachelor of Engineering in {branch} during the academic year {year_str}."
+    )
+    doc.add_paragraph("\n\n")
+    sig_table = doc.add_table(rows=2, cols=3)
+    sig_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    for i, (h, n) in enumerate([
+        ("Signature of Guide", f"Prof. {guide_name}"),
+        ("Signature of HOD", f"HOD, Dept. of {branch}"),
+        ("Signature of Principal", f"Principal, {college}")
+    ]):
+        sig_table.cell(0, i).text = h
+        sig_table.cell(0, i).paragraphs[0].runs[0].bold = True
+        sig_table.cell(1, i).text = n
+    doc.add_page_break()
+
+    # PAGE 3: DECLARATION & ACKNOWLEDGEMENT
+    _add_heading(doc, "DECLARATION", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _add_body(
+        doc,
+        f'I, {student_name} (USN: {usn}), student of {branch}, {college}, hereby declare that the Mini-Project '
+        f'entitled "{title}" has been independently carried out by me under the supervision of Prof. {guide_name}.'
+    )
+    _add_body(doc, f"\nPlace: Karnataka\nDate: {datetime.now().strftime('%d-%m-%Y')}                                   Signature: ({student_name})", bold=True)
+    _add_heading(doc, "ACKNOWLEDGEMENT", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _add_body(
+        doc,
+        f"I express my sincere gratitude to my guide Prof. {guide_name}, HOD, Principal, and faculty of {college} "
+        "for their continuous guidance and lab support throughout this mini-project."
+    )
+    doc.add_page_break()
+
+    # PAGE 4: ABSTRACT & TABLE OF CONTENTS
+    _add_heading(doc, "ABSTRACT", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _add_body(doc, blueprint.get("abstract", ""))
+    _add_heading(doc, "TABLE OF CONTENTS", 1).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    toc_items = [
+        ("1.", "CHAPTER 1: INTRODUCTION & LITERATURE SURVEY", "05"),
+        ("2.", "CHAPTER 2: SYSTEM ARCHITECTURE & CIRCUIT DESIGN", "08"),
+        ("3.", "CHAPTER 3: HARDWARE, SOFTWARE & BUDGET ESTIMATION", "10"),
+        ("4.", "CHAPTER 4: METHODOLOGY & SOURCE CODE IMPLEMENTATION", "12"),
+        ("5.", "CHAPTER 5: RESULTS, APPLICATIONS, FUTURE SCOPE & REFERENCES", "15"),
+        ("6.", "APPENDIX-A: TOP VIVA-VOCE QUESTIONS & ANSWERS (EN & KN)", "17"),
     ]
+    toc_tbl = doc.add_table(rows=len(toc_items) + 1, cols=3)
+    toc_tbl.style = "Table Grid"
+    for idx, h in enumerate(["Sl.", "Chapter / Section Title", "Page"]):
+        c = toc_tbl.cell(0, idx)
+        c.text = h
+        _set_cell_shading(c, "1E3A8A")
+        c.paragraphs[0].runs[0].font.color.rgb = RGBColor(255, 255, 255)
+        c.paragraphs[0].runs[0].bold = True
+    for r_idx, (num, sec_name, pg) in enumerate(toc_items, start=1):
+        toc_tbl.cell(r_idx, 0).text = num
+        toc_tbl.cell(r_idx, 1).text = sec_name
+        toc_tbl.cell(r_idx, 2).text = pg
+    doc.add_page_break()
 
-    for idx, sec in enumerate(order, start=1):
-        if sec == "intro":
-            body.extend([p_xml(f"{idx}. INTRODUCTION", h_size, bold=h_bold), p_xml(proj["intro"], b_size)])
-        elif sec == "components":
-            body.extend([
-                p_xml(f"{idx}. COMPONENTS & BUDGET (TOTAL: Rs.{proj['total_cost']})", h_size, bold=h_bold),
-                p_xml("\n".join(f"• {c['name']} — Rs.{c['cost']}" for c in proj["components"]), b_size)
-            ])
-        elif sec == "working":
-            body.extend([p_xml(f"{idx}. CIRCUIT & WORKING PRINCIPLE", h_size, bold=h_bold), p_xml(proj["working"], b_size)])
-        elif sec == "code":
-            body.extend([p_xml(f"{idx}. SOURCE CODE", h_size, bold=h_bold), p_xml(proj["code"], max(18, b_size - 2), is_code=True)])
-        elif sec == "conclusion":
-            body.extend([p_xml(f"{idx}. CONCLUSION", h_size, bold=h_bold), p_xml(proj["conclusion"], b_size)])
+    # CHAPTER 1
+    _add_heading(doc, "CHAPTER 1: INTRODUCTION & LITERATURE SURVEY", 1)
+    _add_heading(doc, "1.1 Problem Statement", 2)
+    _add_body(doc, blueprint.get("problem_statement", ""))
+    _add_heading(doc, "1.2 Project Objectives", 2)
+    for obj in blueprint.get("objectives", []):
+        p = doc.add_paragraph(obj, style="List Bullet")
+        p.runs[0].font.name = "Times New Roman"
+    _add_heading(doc, "1.3 Literature Survey", 2)
+    lit_list = blueprint.get("literature_survey", [])
+    if lit_list:
+        lt = doc.add_table(rows=len(lit_list) + 1, cols=2)
+        lt.style = "Table Grid"
+        for idx, h in enumerate(["Reference Paper", "Key Findings & Research Gap"]):
+            c = lt.cell(0, idx)
+            c.text = h
+            _set_cell_shading(c, "1E3A8A")
+            c.paragraphs[0].runs[0].font.color.rgb = RGBColor(255, 255, 255)
+            c.paragraphs[0].runs[0].bold = True
+        for i, item in enumerate(lit_list, start=1):
+            lt.cell(i, 0).text = item.get("paper", "")
+            lt.cell(i, 1).text = item.get("summary", "")
+    doc.add_page_break()
 
-    doc_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + "".join(body) + "</w:body></w:document>"
-    ct_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'
-    rels_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'
+    # CHAPTER 2
+    _add_heading(doc, "CHAPTER 2: SYSTEM ARCHITECTURE & CIRCUIT DESIGN", 1)
+    _add_heading(doc, "2.1 Functional Block Diagram Flow", 2)
+    nodes = blueprint.get("block_diagram_nodes", [])
+    for idx, node in enumerate(nodes):
+        bt = doc.add_table(rows=1, cols=1)
+        bt.alignment = WD_TABLE_ALIGNMENT.CENTER
+        cell = bt.cell(0, 0)
+        cell.text = f"[ STAGE {idx + 1} ]   {node.upper()}"
+        _set_cell_shading(cell, "DBEAFE")
+        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cell.paragraphs[0].runs[0].bold = True
+        if idx < len(nodes) - 1:
+            arr = doc.add_paragraph("⬇")
+            arr.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _add_heading(doc, "2.2 Pin-to-Pin Interfacing Table", 2)
+    pins = blueprint.get("pin_connections", [])
+    if pins:
+        pt = doc.add_table(rows=len(pins) + 1, cols=3)
+        pt.style = "Table Grid"
+        for idx, h in enumerate(["Controller Pin", "Target Module Pin", "Signal / Protocol"]):
+            c = pt.cell(0, idx)
+            c.text = h
+            _set_cell_shading(c, "1E3A8A")
+            c.paragraphs[0].runs[0].font.color.rgb = RGBColor(255, 255, 255)
+            c.paragraphs[0].runs[0].bold = True
+        for i, pin in enumerate(pins, start=1):
+            pt.cell(i, 0).text = pin.get("from_pin", "")
+            pt.cell(i, 1).text = pin.get("to_pin", "")
+            pt.cell(i, 2).text = pin.get("signal", "")
+    doc.add_page_break()
+
+    # CHAPTER 3
+    _add_heading(doc, "CHAPTER 3: HARDWARE, SOFTWARE & BUDGET ESTIMATION", 1)
+    hw_list = blueprint.get("hardware_requirements", [])
+    total_cost = 0
+    if hw_list:
+        ht = doc.add_table(rows=len(hw_list) + 2, cols=4)
+        ht.style = "Table Grid"
+        for idx, h in enumerate(["Sl.", "Component", "Specification", "Est. Cost (INR)"]):
+            c = ht.cell(0, idx)
+            c.text = h
+            _set_cell_shading(c, "1E3A8A")
+            c.paragraphs[0].runs[0].font.color.rgb = RGBColor(255, 255, 255)
+            c.paragraphs[0].runs[0].bold = True
+        for i, hw in enumerate(hw_list, start=1):
+            cost = int(hw.get("cost_inr", 0))
+            total_cost += cost
+            ht.cell(i, 0).text = str(i)
+            ht.cell(i, 1).text = hw.get("name", "")
+            ht.cell(i, 2).text = hw.get("spec", "")
+            ht.cell(i, 3).text = f"Rs. {cost}"
+        ht.cell(len(hw_list) + 1, 1).text = "TOTAL ESTIMATED COST"
+        ht.cell(len(hw_list) + 1, 3).text = f"Rs. {total_cost}"
+    _add_heading(doc, "3.2 Software Requirements", 2)
+    for sw in blueprint.get("software_requirements", []):
+        doc.add_paragraph(sw, style="List Bullet")
+    doc.add_page_break()
+
+    # CHAPTER 4
+    _add_heading(doc, "CHAPTER 4: WORKING & COMPLETE SOURCE CODE", 1)
+    _add_body(doc, blueprint.get("working_principle", ""))
+    _add_heading(doc, f"Source Code ({blueprint.get('source_code_language', 'Code')})", 2)
+    ct = doc.add_table(rows=1, cols=1)
+    ct.style = "Table Grid"
+    cc = ct.cell(0, 0)
+    _set_cell_shading(cc, "F3F4F6")
+    r = cc.paragraphs[0].add_run(blueprint.get("source_code", ""))
+    r.font.name = "Consolas"
+    r.font.size = Pt(9.5)
+    doc.add_page_break()
+
+    # CHAPTER 5
+    _add_heading(doc, "CHAPTER 5: RESULTS, APPLICATIONS, FUTURE SCOPE & REFERENCES", 1)
+    _add_body(doc, blueprint.get("results_and_discussion", ""))
+    _add_heading(doc, "Advantages & Applications", 2)
+    for adv in blueprint.get("advantages", []):
+        doc.add_paragraph("Advantage: " + adv, style="List Bullet")
+    for ap in blueprint.get("applications", []):
+        doc.add_paragraph("Application: " + ap, style="List Bullet")
+    _add_heading(doc, "Future Scope", 2)
+    _add_body(doc, blueprint.get("future_scope", ""))
+    _add_heading(doc, "References", 2)
+    for ref in blueprint.get("references", []):
+        _add_body(doc, ref, align=WD_ALIGN_PARAGRAPH.LEFT)
+    doc.add_page_break()
+
+    # APPENDIX A: VIVA Q&A
+    _add_heading(doc, "APPENDIX-A: VIVA-VOCE QUESTIONS & ANSWERS (ENGLISH & KANNADA)", 1)
+    for idx, qa in enumerate(blueprint.get("viva_qa", []), start=1):
+        _add_body(doc, f"Q{idx} (EN): {qa.get('q_en', '')}", bold=True, align=WD_ALIGN_PARAGRAPH.LEFT)
+        _add_body(doc, f"Ans (EN): {qa.get('a_en', '')}", align=WD_ALIGN_PARAGRAPH.LEFT)
+        if qa.get("q_kn"):
+            _add_body(doc, f"ಪ್ರಶ್ನೆ {idx} (KN): {qa.get('q_kn', '')}", bold=True, align=WD_ALIGN_PARAGRAPH.LEFT)
+            _add_body(doc, f"ಉತ್ತರ (KN): {qa.get('a_kn', '')}", align=WD_ALIGN_PARAGRAPH.LEFT)
 
     buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("[Content_Types].xml", ct_xml)
-        zf.writestr("_rels/.rels", rels_xml)
-        zf.writestr("word/document.xml", doc_xml)
-    return buf.getvalue()
+    doc.save(buf)
+    buf.seek(0)
+    return buf
 
 
-MANIFEST_JSON = json.dumps({
-    "name": "ProjForge AI Studio",
-    "short_name": "ProjForge",
-    "start_url": "/",
-    "display": "standalone",
-    "background_color": "#0b1120",
-    "theme_color": "#0284c7",
-    "icons": [{
-        "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230284c7'/%3E%3Ctext x='96' y='125' font-size='95' text-anchor='middle' fill='white'%3E⚡%3C/text%3E%3C/svg%3E",
-        "sizes": "192x192",
-        "type": "image/svg+xml"
-    }]
-})
-
-SW_JS = "self.addEventListener('fetch', function(e) {});"
-
-ROBOTS_TXT = "User-agent: *\nAllow: /\nSitemap: https://projforge-ai.onrender.com/sitemap.xml\n"
-
-SITEMAP_XML = """<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://projforge-ai.onrender.com/</loc>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-</urlset>"""
-
-HTML_PAGE = f"""<!DOCTYPE html>
+# ==================== 3. FRONTEND HTML (4s FLASH + LOGIN + UI) ====================
+HTML_PAGE = """<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="google-site-verification" content="SCartIuz0KkP830B_WEA5VUsTsnhn86LXdXn18LBKJQ" />
-<meta name="description" content="ProjForge AI - Instant Engineering Mini Project Generator, Budget Circuit Simulation, Ready-to-Dump Arduino/Python Code & Exact MS Word (.docx) Report Maker for VTU & Engineering Students." />
-<meta name="keywords" content="ProjForge AI, engineering project report generator, VTU mini project word format, Arduino code generator, PBL project ideas, Kannada project explanation" />
-<meta name="robots" content="index, follow" />
-<meta name="theme-color" content="#0284c7" />
-<link rel="manifest" href="/manifest.json" />
-<title>ProjForge AI — Engineering Project & Exact MS Word (.docx) Report Generator</title>
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<style>
-  * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }}
-  body {{ background: #0b1120; color: #f8fafc; min-height: 100vh; }}
-  .banner {{ background: linear-gradient(90deg, #10b981, #059669); color: #fff; text-align: center; padding: 9px; font-weight: 800; font-size: 13px; }}
-  .banner.paid {{ background: linear-gradient(90deg, #f59e0b, #ef4444); color: #111; }}
-  .nav {{ background: #1e293b; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; flex-wrap: wrap; gap: 8px; }}
-  .nav h1 {{ font-size: 18px; color: #38bdf8; }}
-  .pill {{ background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }}
-  .install-btn {{ background: #f59e0b; color: #111; border: none; padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 12px; cursor: pointer; display: none; }}
-  .wrap {{ max-width: 1180px; margin: 16px auto; padding: 0 12px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }}
-  .card {{ background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px; }}
-  .card h2 {{ font-size: 15px; color: #38bdf8; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }}
-  .tabs {{ display: flex; gap: 6px; margin-bottom: 10px; }}
-  .tab {{ flex: 1; padding: 8px 4px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #cbd5e1; font-size: 11.5px; font-weight: 700; cursor: pointer; }}
-  .tab.active {{ background: #38bdf8; color: #0f172a; border-color: #38bdf8; }}
-  label {{ display: block; font-size: 12px; color: #94a3b8; margin: 8px 0 4px; font-weight: 600; }}
-  input, select, textarea {{ width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 13px; outline: none; }}
-  input::placeholder {{ color: #64748b; }}
-  .grid2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }}
-  .btn-ai {{ width: 100%; margin-top: 12px; padding: 11px; border: none; border-radius: 9px; background: linear-gradient(90deg, #0284c7, #2563eb); color: #fff; font-weight: 800; font-size: 14px; cursor: pointer; }}
-  .btn-pay {{ width: 100%; margin-top: 14px; padding: 13px; border: none; border-radius: 10px; background: linear-gradient(90deg, #10b981, #059669); color: #fff; font-size: 14.5px; font-weight: 800; cursor: pointer; }}
-  .sim-box {{ background: #020617; border: 2px solid #0ea5e9; border-radius: 10px; padding: 8px; margin-top: 10px; text-align: center; }}
-  .lang-row {{ display: flex; gap: 6px; margin: 8px 0; }}
-  .lbtn {{ padding: 5px 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #cbd5e1; cursor: pointer; font-size: 12px; font-weight: 700; }}
-  .lbtn.active {{ background: #10b981; color: #052e16; border-color: #10b981; }}
-  .viva-box {{ background: #0f172a; padding: 10px; border-radius: 8px; font-size: 13px; line-height: 1.5; border-left: 4px solid #10b981; }}
-  .bom {{ margin: 8px 0 0 18px; font-size: 12.5px; color: #e2e8f0; line-height: 1.55; }}
-  .code-box {{ background: #020617; color: #a7f3d0; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 12px; white-space: pre-wrap; margin-top: 8px; max-height: 160px; overflow-y: auto; border: 1px solid #334155; }}
-  .modal {{ position: fixed; inset: 0; background: rgba(0,0,0,0.88); display: flex; justify-content: center; align-items: center; z-index: 99; padding: 12px; }}
-  .mcard {{ background: #1e293b; border: 2px solid #38bdf8; border-radius: 16px; padding: 20px; width: 380px; max-width: 100%; text-align: center; }}
-  .wipe-alert {{ background: #064e3b; border: 1px solid #10b981; color: #a7f3d0; padding: 8px 10px; border-radius: 8px; font-size: 12px; margin-top: 10px; display: none; }}
-  @keyframes flow {{ 0% {{ stroke-dashoffset: 24; }} 100% {{ stroke-dashoffset: 0; }} }}
-  .wire {{ stroke-dasharray: 6 6; animation: flow 0.8s linear infinite; }}
-  @media (max-width: 820px) {{ .wrap {{ grid-template-columns: 1fr; }} }}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ProjForge AI — Engineering Project & VTU Report Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #060913; color: #f1f5f9; overflow-x: hidden; }
+    h1, h2, h3, .brand-font { font-family: 'Space Grotesk', sans-serif; }
+    code, pre { font-family: 'JetBrains Mono', monospace; }
+
+    #splash-screen {
+      position: fixed; inset: 0; z-index: 9999;
+      background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.7s ease, visibility 0.7s ease;
+    }
+    .cyber-ring {
+      width: 112px; height: 112px; border-radius: 50%;
+      border: 3px solid transparent; border-top-color: #38bdf8; border-right-color: #818cf8;
+      animation: spinRing 1.1s linear infinite;
+      box-shadow: 0 0 40px rgba(56, 189, 248, 0.5);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cyber-core {
+      width: 70px; height: 70px; border-radius: 18px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 25px; color: white;
+      animation: pulseCore 1.4s ease-in-out infinite alternate;
+    }
+    @keyframes spinRing { 100% { transform: rotate(360deg); } }
+    @keyframes pulseCore { from { transform: scale(0.92); } to { transform: scale(1.07); } }
+    .flash-bar { width: 240px; height: 4px; background: #1e293b; border-radius: 999px; overflow: hidden; margin-top: 22px; }
+    .flash-progress { height: 100%; width: 0%; background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc); animation: loadBar 3.7s ease forwards; }
+    @keyframes loadBar { 0% { width: 0%; } 60% { width: 78%; } 100% { width: 100%; } }
+
+    .glass { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(148, 163, 184, 0.15); }
+    .watermark-box { position: relative; overflow: hidden; }
+    .watermark-box::after {
+      content: "PROJFORGE AI • PREVIEW • DOWNLOAD DOCX FOR FULL 15+ PAGES";
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg);
+      font-size: 1.1rem; font-weight: 800; letter-spacing: 2px;
+      color: rgba(56, 189, 248, 0.11); white-space: nowrap; pointer-events: none;
+    }
+  </style>
 </head>
 <body>
-  <div class="banner" id="topBanner">🎉 LAUNCH OFFER: 100% FREE for First 2 Days! (₹{PRICE_INR} after 2 days) 🎉</div>
-  <div class="nav">
-    <h1>⚡ ProjForge AI</h1>
-    <div style="display:flex;gap:6px;align-items:center;">
-      <button class="install-btn" id="installBtn" onclick="installPWA()">📲 Install App</button>
-      <span class="pill" id="userBadge">Login Required</span>
-      <button class="lbtn" onclick="logout()">Switch</button>
-    </div>
+
+  <!-- 1. 4-SEC FLASH ANIMATION -->
+  <div id="splash-screen">
+    <div class="cyber-ring"><div class="cyber-core">PF</div></div>
+    <h1 class="text-3xl md:text-4xl font-bold mt-6 tracking-tight bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
+      ProjForge AI Studio
+    </h1>
+    <p id="splash-status" class="text-xs text-slate-400 mt-2 tracking-widest uppercase">
+      Initializing Neural Circuit &amp; VTU Report Engine...
+    </p>
+    <div class="flash-bar"><div class="flash-progress"></div></div>
   </div>
 
-  <!-- Login Modal -->
-  <div class="modal" id="loginModal">
-    <div class="mcard">
-      <h2 style="color:#38bdf8;margin-bottom:6px;">Student Login</h2>
-      <p style="font-size:13px;color:#94a3b8;margin-bottom:14px;">Login with Email or Mobile Number to access ProjForge AI.</p>
-      <input id="loginContact" placeholder="Email or 10-digit Mobile Number" onkeydown="if(event.key==='Enter') doLogin()" />
-      <button class="btn-pay" style="margin-top:12px;" onclick="doLogin()">Open Studio</button>
-    </div>
-  </div>
-
-  <div class="wrap">
-    <div class="card">
-      <h2>1. Select / Enter Project <span style="font-size:11px;color:#10b981;">ZERO-TRACE</span></h2>
-      <div class="tabs">
-        <button class="tab active" id="t_trend" onclick="setMode('trending')">🔥 Trending</button>
-        <button class="tab" id="t_name" onclick="setMode('name_only')">✍️ Only Name</button>
-        <button class="tab" id="t_custom" onclick="setMode('custom')">⚙️ Full Custom</button>
-      </div>
-
-      <div id="trendingBox">
-        <label>Pick Trending Project:</label>
-        <select id="trendSelect" onchange="applyTrending()">
-          <option value="Automatic Smart Street Light & Traffic Control|AELIC / Embedded">Smart Street Light & Traffic Control (Arduino / AELIC)</option>
-          <option value="ESP32 IoT Patient Heart & Temp Monitor|IoT / Biomedical">ESP32 IoT Patient Health Monitor (Trending)</option>
-          <option value="AI Smart Attendance & 75% Shortage Alert|Python / CSE">AI Smart Attendance & Shortage Alert (Python)</option>
-          <option value="RC Low-Pass Noise Filter & Transient Analyzer|Network Analysis">RC Noise Filter & Transient Analyzer (Network Analysis)</option>
-          <option value="Smart Ultrasonic Blind Walking Stick|PBL / 1st Year">Smart Ultrasonic Blind Walking Stick (PBL)</option>
-        </select>
-      </div>
-
-      <label>Project Name:</label>
-      <input id="projTitle" value="Automatic Smart Street Light & Traffic Control" />
-
-      <div class="grid2">
-        <div><label>Subject / Branch:</label><input id="projBranch" value="AELIC / Embedded" /></div>
-        <div><label>Max Budget (₹ INR):</label><input id="projBudget" type="number" value="600" min="200" step="50" /></div>
-      </div>
-
-      <div id="customNotesBox" style="display:none;">
-        <label>Extra Technical Details:</label>
-        <textarea id="extraNotes" placeholder="e.g., Buzzer alert, LCD display..."></textarea>
-      </div>
-
-      <button class="btn-ai" onclick="compileProject()">⚡ AI Compile Circuit & Budget (Free)</button>
-
-      <div class="sim-box">
-        <div style="font-size:11px;color:#38bdf8;font-weight:700;margin-bottom:4px;">LIVE CONNECTION SIMULATION</div>
-        <svg id="simSvg" width="100%" height="145" viewBox="0 0 460 145"></svg>
-      </div>
-
-      <div class="lang-row">
-        <button class="lbtn active" id="l_kn" onclick="setLang('kn')">ಕನ್ನಡ</button>
-        <button class="lbtn" id="l_en" onclick="setLang('en')">English</button>
-        <button class="lbtn" id="l_hi" onclick="setLang('hi')">हिन्दी</button>
-      </div>
-      <div class="viva-box" id="vivaText"></div>
-      <ul class="bom" id="bomList"></ul>
-    </div>
-
-    <div class="card">
-      <h2>2. Exact Word (.docx) Rules</h2>
-      <div class="grid2">
-        <div><label>Student Name</label><input id="stName" placeholder="Enter your full name" /></div>
-        <div><label>USN / Roll No</label><input id="stUsn" placeholder="e.g. 1XX23CS001" /></div>
-      </div>
-      <div class="grid2">
-        <div><label>College Name</label><input id="clgName" placeholder="Enter college name" /></div>
-        <div><label>Guide / Faculty Name</label><input id="guideName" placeholder="Enter guide name" /></div>
-      </div>
-      <div class="grid2">
+  <!-- 2. SMART EMAIL LOGIN MODAL -->
+  <div id="login-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div class="glass max-w-md w-full rounded-2xl p-6 md:p-8 shadow-2xl border border-sky-500/30">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-violet-600 flex items-center justify-center font-bold text-white">PF</div>
         <div>
-          <label>Font Name</label>
-          <select id="fontName">
-            <option value="Times New Roman">Times New Roman</option>
-            <option value="Arial">Arial</option>
-            <option value="Calibri">Calibri</option>
-            <option value="Georgia">Georgia</option>
-            <option value="Verdana">Verdana</option>
-            <option value="Cambria">Cambria</option>
-          </select>
-        </div>
-        <div>
-          <label>Heading Style</label>
-          <select id="hBold">
-            <option value="true">Bold Headings</option>
-            <option value="false">Normal Headings</option>
-          </select>
+          <h2 class="text-xl font-bold text-white">Student Workspace Sign-In</h2>
+          <p class="text-xs text-slate-400">Auto-fills your Name &amp; USN on VTU .docx cover pages</p>
         </div>
       </div>
-      <div class="grid2">
+
+      <form id="login-form" class="space-y-3.5 mt-4">
         <div>
-          <label>Heading / Body Size</label>
-          <div class="grid2">
-            <select id="hSize"><option value="14">14 pt</option><option value="16">16 pt</option></select>
-            <select id="bSize"><option value="12">12 pt</option><option value="11">11 pt</option></select>
+          <label class="text-xs text-slate-300 font-medium">Student Email ID *</label>
+          <input id="login-email" type="email" required placeholder="prajwal@college.edu.in"
+            class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-sm focus:border-sky-400 focus:outline-none" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-300 font-medium">Full Name *</label>
+            <input id="login-name" type="text" required placeholder="Prajwal Metri"
+              class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-sm focus:border-sky-400 focus:outline-none" />
+          </div>
+          <div>
+            <label class="text-xs text-slate-300 font-medium">USN / Roll No *</label>
+            <input id="login-usn" type="text" required placeholder="1VT23CS045"
+              class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-sm uppercase focus:border-sky-400 focus:outline-none" />
           </div>
         </div>
         <div>
-          <label>Line Spacing</label>
-          <select id="lineSpacing"><option value="1.15">1.15</option><option value="1.5">1.5 (VTU)</option></select>
+          <label class="text-xs text-slate-300 font-medium">College Name</label>
+          <input id="login-college" type="text" placeholder="VTU Affiliated Engineering College"
+            class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-sm focus:border-sky-400 focus:outline-none" />
         </div>
-      </div>
-
-      <label>Exact Section Order:</label>
-      <select id="secOrder">
-        <option value="intro,components,working,code,conclusion">1. Intro → 2. Components → 3. Working → 4. Code → 5. Conclusion</option>
-        <option value="intro,working,components,code,conclusion">1. Intro → 2. Working → 3. Components → 4. Code → 5. Conclusion</option>
-        <option value="intro,components,code,working,conclusion">1. Intro → 2. Components → 3. Code → 4. Working → 5. Conclusion</option>
-      </select>
-
-      <button class="btn-pay" id="mainPayBtn" onclick="handleDownloadClick()">Download Word (.docx) + Dump Code — FREE (2-Day Launch)</button>
-      <div class="wipe-alert" id="wipeAlert">🛡️ Downloaded & project details wiped from server memory!</div>
-      <div id="codeSection" style="display:none;">
-        <label style="color:#10b981;">✅ Ready-to-Dump Code:</label>
-        <div class="code-box" id="codeOut"></div>
-      </div>
+        <button type="submit"
+          class="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 font-semibold text-white shadow-lg shadow-sky-500/25 transition">
+          Enter ProjForge Studio →
+        </button>
+      </form>
+      <button onclick="skipLogin()" class="w-full mt-3 text-xs text-slate-400 hover:text-slate-200 underline">
+        Continue as Guest
+      </button>
     </div>
   </div>
 
-<script>
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
-let deferredPrompt = null;
-window.addEventListener("beforeinstallprompt", (e) => {{
-  e.preventDefault();
-  deferredPrompt = e;
-  document.getElementById("installBtn").style.display = "inline-block";
-}});
-function installPWA() {{
-  if (deferredPrompt) {{ deferredPrompt.prompt(); deferredPrompt = null; }}
-  else alert("Browser menu (⋮) -> 'Add to Home Screen' / 'Install App' click maadi!");
-}}
+  <!-- 3. HEADER -->
+  <header class="sticky top-0 z-40 glass border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow">PF</div>
+        <div>
+          <span class="brand-font font-bold text-lg text-white">ProjForge <span class="text-sky-400">AI</span></span>
+          <span class="hidden sm:inline-block ml-2 text-[11px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">v2.0 Pro</span>
+        </div>
+      </div>
 
-let currentUser = "", isFreeNow = true, hoursLeft = 48, curMode = "trending", curLang = "kn", compiledProj = null;
+      <div class="flex items-center gap-3">
+        {% if free_active %}
+        <span class="text-xs px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-medium">
+          🎉 2-Day Free Launch Active!
+        </span>
+        {% else %}
+        <span class="text-xs px-3 py-1.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium">
+          Full 15+ Page Pack: ₹{{ price_inr }}
+        </span>
+        {% endif %}
+        <button onclick="openLoginModal()" id="user-badge"
+          class="text-xs px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200">
+          👤 Student Login
+        </button>
+      </div>
+    </div>
+  </header>
 
-function setMode(m) {{
-  curMode = m;
-  ["trend", "name", "custom"].forEach(k => document.getElementById("t_" + k).classList.toggle("active", m.startsWith(k)));
-  document.getElementById("trendingBox").style.display = m === "trending" ? "block" : "none";
-  document.getElementById("customNotesBox").style.display = m === "custom" ? "block" : "none";
-  if (m === "trending") applyTrending();
-}}
-function applyTrending() {{
-  const [t, b] = document.getElementById("trendSelect").value.split("|");
-  document.getElementById("projTitle").value = t;
-  document.getElementById("projBranch").value = b;
-  compileProject();
-}}
-function setLang(l) {{
-  curLang = l;
-  ["kn", "en", "hi"].forEach(x => document.getElementById("l_" + x).classList.toggle("active", x === l));
-  if (compiledProj) document.getElementById("vivaText").textContent = compiledProj.viva[curLang];
-}}
-function updatePriceUI() {{
-  const banner = document.getElementById("topBanner");
-  const btn = document.getElementById("mainPayBtn");
-  if (isFreeNow) {{
-    banner.classList.remove("paid");
-    banner.textContent = `🎉 LAUNCH OFFER: 100% FREE for ${{hoursLeft}} hrs left! (₹{PRICE_INR} after 2 days) 🎉`;
-    btn.textContent = "Download Word (.docx) + Dump Code — FREE (Launch Offer)";
-  }} else {{
-    banner.classList.add("paid");
-    banner.textContent = "⚡ 2-DAY FREE LAUNCH ENDED — Exact Word (.docx) + Dump Code at ₹{PRICE_INR} ⚡";
-    btn.textContent = "Pay ₹{PRICE_INR} (PhonePe / GPay / UPI) & Auto-Download";
-  }}
-}}
-async function doLogin() {{
-  const contact = document.getElementById("loginContact").value.trim();
-  if (contact.length < 5) {{ alert("Valid Email or Mobile Number haaki!"); return; }}
-  const res = await fetch("/api/login", {{ method: "POST", body: JSON.stringify({{ contact }}) }});
-  const data = await res.json();
-  currentUser = contact;
-  isFreeNow = data.is_free;
-  hoursLeft = data.hours_left;
-  document.getElementById("userBadge").textContent = currentUser;
-  document.getElementById("loginModal").style.display = "none";
-  updatePriceUI();
-  compileProject();
-}}
-function logout() {{ currentUser = ""; document.getElementById("loginModal").style.display = "flex"; }}
-async function compileProject() {{
-  const res = await fetch("/api/compile", {{
-    method: "POST",
-    body: JSON.stringify({{
-      mode: curMode,
-      title: document.getElementById("projTitle").value,
-      branch: document.getElementById("projBranch").value,
-      budget: document.getElementById("projBudget").value,
-      extra_notes: document.getElementById("extraNotes").value
-    }})
-  }});
-  compiledProj = await res.json();
-  document.getElementById("vivaText").textContent = compiledProj.viva[curLang];
-  document.getElementById("bomList").innerHTML = compiledProj.components.map(c => `<li><b>${{c.name}}</b> — ₹${{c.cost}}</li>`).join("") + `<li><b style="color:#10b981;">Total Cost: ₹${{compiledProj.total_cost}}</b></li>`;
-  document.getElementById("codeOut").textContent = compiledProj.code;
-  const svg = document.getElementById("simSvg");
-  svg.innerHTML = `<rect x="20" y="35" width="115" height="75" rx="8" fill="#0369a1" stroke="#38bdf8" stroke-width="2"/><text x="77" y="77" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">CONTROLLER</text><rect x="190" y="35" width="100" height="75" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/><text x="240" y="77" fill="#fbbf24" font-size="12" font-weight="bold" text-anchor="middle">INPUT/SENSOR</text><rect x="345" y="35" width="95" height="75" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="2"/><text x="392" y="77" fill="#6ee7b7" font-size="12" font-weight="bold" text-anchor="middle">OUTPUT</text><line x1="135" y1="72" x2="190" y2="72" stroke="#fbbf24" stroke-width="3" class="wire"/><line x1="290" y1="72" x2="345" y2="72" stroke="#10b981" stroke-width="3" class="wire"/>`;
-}}
-async function handleDownloadClick() {{
-  if (!currentUser) {{ document.getElementById("loginModal").style.display = "flex"; return; }}
-  if (isFreeNow) {{
-    executeDownloadAndWipe(null);
-    return;
-  }}
-  const orderRes = await fetch("/api/create_order", {{ method: "POST" }});
-  const orderData = await orderRes.json();
-  if (!orderRes.ok) {{
-    alert(orderData.error || "Payment gateway setup pending!");
-    return;
-  }}
-  const options = {{
-    key: orderData.key_id,
-    amount: orderData.amount,
-    currency: "INR",
-    name: "ProjForge AI",
-    description: "Exact MS Word (.docx) Report + Ready Code",
-    order_id: orderData.order_id,
-    theme: {{ color: "#0284c7" }},
-    handler: function (response) {{
-      executeDownloadAndWipe(response);
-    }}
-  }};
-  const rzp = new Razorpay(options);
-  rzp.open();
-}}
-async function executeDownloadAndWipe(rzpResp) {{
-  const cfg = {{
-    contact: currentUser, rzp: rzpResp, project: compiledProj,
-    student: document.getElementById("stName").value, usn: document.getElementById("stUsn").value,
-    college: document.getElementById("clgName").value, guide: document.getElementById("guideName").value,
-    font: document.getElementById("fontName").value, h_bold: document.getElementById("hBold").value === "true",
-    h_size: document.getElementById("hSize").value, b_size: document.getElementById("bSize").value,
-    spacing: document.getElementById("lineSpacing").value, order: document.getElementById("secOrder").value.split(",")
-  }};
-  const res = await fetch("/api/unlock_and_wipe", {{ method: "POST", body: JSON.stringify(cfg) }});
-  if (!res.ok) {{
-    const err = await res.json();
-    alert(err.error || "Payment verification failed!");
-    return;
-  }}
-  const blob = await res.blob();
-  const fileLabel = (cfg.usn || "Project").trim();
-  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${{fileLabel}}_Report.docx`; a.click();
-  document.getElementById("codeSection").style.display = "block";
-  document.getElementById("wipeAlert").style.display = "block";
-}}
-</script>
+  <!-- 4. GENERATOR SECTION -->
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <section class="text-center max-w-3xl mx-auto mb-8">
+      <h1 class="text-3xl md:text-5xl font-bold leading-tight bg-gradient-to-r from-white via-sky-200 to-indigo-300 bg-clip-text text-transparent">
+        Build Engineering Projects, Circuits &amp; 15+ Page VTU Reports in Seconds
+      </h1>
+      <p class="text-slate-400 text-sm md:text-base mt-3">
+        Gemini AI Engine • Auto Pin-to-Pin Circuit Diagrams • Working Source Code • English &amp; Kannada Viva Q&amp;A
+      </p>
+    </section>
+
+    <section class="glass rounded-2xl p-5 md:p-7 max-w-4xl mx-auto shadow-2xl border border-slate-700/70">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-3">
+          <label class="text-xs font-semibold uppercase tracking-wider text-sky-400">Enter Your Project Topic / Idea *</label>
+          <input id="topic-input" type="text"
+            placeholder="e.g., IoT Smart Helmet with Alcohol & Accident Detection / AI Fake News Detector"
+            class="w-full mt-1.5 px-4 py-3.5 rounded-xl bg-slate-950/90 border border-slate-700 text-white text-sm md:text-base focus:border-sky-400 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="text-xs text-slate-400">Engineering Branch</label>
+          <select id="branch-input" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white">
+            <option>Computer Science &amp; Engineering (CSE)</option>
+            <option>Electronics &amp; Communication (ECE)</option>
+            <option>Artificial Intelligence &amp; ML (AIML)</option>
+            <option>Electrical &amp; Electronics (EEE)</option>
+            <option>Information Science (ISE)</option>
+            <option>Mechanical Engineering</option>
+            <option>Civil Engineering</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-xs text-slate-400">Project Level</label>
+          <select id="level-input" class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white">
+            <option>2nd / 3rd Year Mini-Project</option>
+            <option>Final Year Major Capstone Project</option>
+            <option>Hackathon / Innovation Prototype</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-xs text-slate-400">Guide Name (For Certificate)</label>
+          <input id="guide-input" type="text" placeholder="Dr. S. K. Kulkarni"
+            class="w-full mt-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white" />
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 mt-4">
+        <span class="text-xs text-slate-400">Try:</span>
+        <button type="button" onclick="setSample('Smart Automated Railway Gate Control using IR & ESP32')" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-sky-300 border border-slate-700">🚂 Smart Railway Gate</button>
+        <button type="button" onclick="setSample('AI-Powered Leaf Disease Detection using CNN & Python')" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-sky-300 border border-slate-700">🌿 Crop Disease AI</button>
+        <button type="button" onclick="setSample('RFID & Biometric Smart Attendance System with Cloud Log')" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-sky-300 border border-slate-700">🪪 Smart Attendance</button>
+      </div>
+
+      <button id="generate-btn" onclick="generateProject()"
+        class="w-full mt-5 py-3.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:opacity-95 font-bold text-white text-base shadow-xl shadow-blue-600/25 transition">
+        ⚡ Generate Complete Project, Circuit &amp; VTU Report
+      </button>
+    </section>
+
+    <!-- 5. RESULTS WORKSPACE -->
+    <section id="result-section" class="hidden mt-10 space-y-6">
+      <div class="glass rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-sky-500/30">
+        <div>
+          <span class="text-xs uppercase tracking-wider text-sky-400 font-semibold">Generated Blueprint Ready</span>
+          <h2 id="res-title" class="text-xl md:text-2xl font-bold text-white mt-0.5"></h2>
+          <p id="res-tagline" class="text-xs text-slate-400 mt-1"></p>
+        </div>
+
+        <button onclick="initiateDocxDownload()" id="download-docx-btn"
+          class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-bold text-white text-sm shadow-lg shadow-emerald-600/25 shrink-0">
+          {% if free_active %}
+          📥 Download 15+ Page VTU Report (.docx) — FREE
+          {% else %}
+          📥 Unlock &amp; Download 15+ Page .docx (₹{{ price_inr }})
+          {% endif %}
+        </button>
+      </div>
+
+      <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
+        <button onclick="switchTab('tab-report', this)" class="tab-btn px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-semibold">📄 Watermarked Report Preview</button>
+        <button onclick="switchTab('tab-circuit', this)" class="tab-btn px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">🔌 Block &amp; Pin Circuit Diagram</button>
+        <button onclick="switchTab('tab-code', this)" class="tab-btn px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">💻 Working Source Code</button>
+        <button onclick="switchTab('tab-viva', this)" class="tab-btn px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">🎓 Viva Q&amp;A (English + ಕನ್ನಡ)</button>
+      </div>
+
+      <!-- TAB 1 -->
+      <div id="tab-report" class="tab-panel glass watermark-box rounded-2xl p-6 space-y-5">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-bold text-sky-300">Abstract &amp; Executive Overview</h3>
+          <span class="text-[11px] px-2.5 py-1 rounded bg-slate-800 text-slate-400">Preview Mode • Full Certificate &amp; Chapters in .docx</span>
+        </div>
+        <p id="res-abstract" class="text-sm text-slate-300 leading-relaxed"></p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+            <h4 class="text-sm font-bold text-indigo-300 mb-2">🎯 Project Objectives</h4>
+            <ul id="res-objectives" class="list-disc list-inside text-xs text-slate-300 space-y-1.5"></ul>
+          </div>
+          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+            <h4 class="text-sm font-bold text-emerald-300 mb-2">💰 Estimated Hardware &amp; BOM Budget</h4>
+            <div id="res-bom" class="text-xs text-slate-300 space-y-1.5"></div>
+          </div>
+        </div>
+        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+          <h4 class="text-sm font-bold text-sky-300 mb-2">⚙️ Working Methodology</h4>
+          <p id="res-working" class="text-xs text-slate-300 leading-relaxed"></p>
+        </div>
+      </div>
+
+      <!-- TAB 2 -->
+      <div id="tab-circuit" class="tab-panel hidden glass rounded-2xl p-6 space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="text-lg font-bold text-sky-300">Auto-Generated System Block &amp; Pin-Interfacing Diagram</h3>
+            <p class="text-xs text-slate-400">Download high-resolution PNG diagram for your PPT or lab record</p>
+          </div>
+          <button onclick="downloadDiagramPNG()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white">
+            🖼️ Download Diagram Image (.PNG)
+          </button>
+        </div>
+        <div class="overflow-x-auto bg-slate-950 rounded-xl p-4 border border-slate-800 flex justify-center">
+          <canvas id="circuit-canvas" width="860" height="360" class="max-w-full rounded-lg"></canvas>
+        </div>
+        <div>
+          <h4 class="text-sm font-bold text-indigo-300 mb-2">📌 Pin-to-Pin Connection Table</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left border border-slate-800">
+              <thead class="bg-slate-900 text-sky-300">
+                <tr>
+                  <th class="p-2.5 border-b border-slate-800">Controller / Source Pin</th>
+                  <th class="p-2.5 border-b border-slate-800">Sensor / Target Module Pin</th>
+                  <th class="p-2.5 border-b border-slate-800">Signal / Protocol</th>
+                </tr>
+              </thead>
+              <tbody id="res-pins" class="divide-y divide-slate-800 text-slate-300"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3 -->
+      <div id="tab-code" class="tab-panel hidden glass rounded-2xl p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 id="res-code-lang" class="text-lg font-bold text-emerald-300">Source Code</h3>
+          <button onclick="copySourceCode()" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-sky-300 border border-slate-700">
+            📋 Copy Code
+          </button>
+        </div>
+        <pre id="res-code" class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-emerald-300 overflow-x-auto leading-relaxed"></pre>
+      </div>
+
+      <!-- TAB 4 -->
+      <div id="tab-viva" class="tab-panel hidden glass rounded-2xl p-6 space-y-4">
+        <h3 class="text-lg font-bold text-purple-300">🎓 Top External Viva-Voce Questions (English &amp; ಕನ್ನಡ)</h3>
+        <div id="res-viva" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let currentBlueprint = null;
+    let studentProfile = JSON.parse(localStorage.getItem("pf_student") || "null");
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const steps = ["Loading Gemini Neural Architecture...", "Calibrating Circuit Renderer...", "Preparing VTU 15+ Page DOCX Engine..."];
+      let idx = 0;
+      const iv = setInterval(() => {
+        idx++;
+        if (idx < steps.length) document.getElementById("splash-status").innerText = steps[idx];
+      }, 1150);
+
+      setTimeout(() => {
+        clearInterval(iv);
+        const s = document.getElementById("splash-screen");
+        s.style.opacity = "0";
+        s.style.visibility = "hidden";
+        if (!studentProfile) openLoginModal();
+        else updateUserBadge();
+      }, 3800);
+    });
+
+    function openLoginModal() {
+      const m = document.getElementById("login-modal");
+      m.classList.remove("hidden"); m.classList.add("flex");
+    }
+    function closeLoginModal() {
+      const m = document.getElementById("login-modal");
+      m.classList.add("hidden"); m.classList.remove("flex");
+    }
+    function skipLogin() {
+      if (!studentProfile) studentProfile = { email: "", name: "Student Name", usn: "1VT23CS001", college: "VTU Affiliated Engineering College" };
+      closeLoginModal();
+    }
+    document.getElementById("login-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      studentProfile = {
+        email: document.getElementById("login-email").value.trim(),
+        name: document.getElementById("login-name").value.trim(),
+        usn: document.getElementById("login-usn").value.trim().toUpperCase(),
+        college: document.getElementById("login-college").value.trim() || "VTU Affiliated Engineering College"
+      };
+      localStorage.setItem("pf_student", JSON.stringify(studentProfile));
+      updateUserBadge();
+      closeLoginModal();
+    });
+    function updateUserBadge() {
+      if (studentProfile && studentProfile.name) {
+        document.getElementById("user-badge").innerText = `👤 ${studentProfile.name} (${studentProfile.usn})`;
+      }
+    }
+    function setSample(txt) { document.getElementById("topic-input").value = txt; }
+    function switchTab(tabId, btn) {
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
+      document.getElementById(tabId).classList.remove("hidden");
+      document.querySelectorAll(".tab-btn").forEach(b => { b.classList.remove("bg-sky-600", "text-white"); b.classList.add("bg-slate-800", "text-slate-300"); });
+      btn.classList.remove("bg-slate-800", "text-slate-300"); btn.classList.add("bg-sky-600", "text-white");
+    }
+
+    async function generateProject() {
+      const topic = document.getElementById("topic-input").value.trim();
+      const branch = document.getElementById("branch-input").value;
+      const level = document.getElementById("level-input").value;
+      if (!topic) return alert("Please enter your project topic first!");
+
+      const btn = document.getElementById("generate-btn");
+      btn.disabled = true;
+      btn.innerText = "⏳ Generating Blueprint, Circuit & Viva Q&A...";
+
+      try {
+        const res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topic, branch, level })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        currentBlueprint = data.blueprint;
+        renderBlueprint(currentBlueprint);
+        document.getElementById("result-section").classList.remove("hidden");
+        document.getElementById("result-section").scrollIntoView({ behavior: "smooth" });
+      } catch (err) {
+        alert("Error: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "⚡ Generate Complete Project, Circuit & VTU Report";
+      }
+    }
+
+    function renderBlueprint(bp) {
+      document.getElementById("res-title").innerText = bp.title || "";
+      document.getElementById("res-tagline").innerText = bp.tagline || "";
+      document.getElementById("res-abstract").innerText = bp.abstract || "";
+      document.getElementById("res-working").innerText = bp.working_principle || "";
+      document.getElementById("res-objectives").innerHTML = (bp.objectives || []).map(o => `<li>${o}</li>`).join("");
+
+      let total = 0;
+      document.getElementById("res-bom").innerHTML = (bp.hardware_requirements || []).map(h => {
+        total += Number(h.cost_inr || 0);
+        return `<div class="flex justify-between border-b border-slate-800 pb-1"><span>${h.name}</span><span class="text-emerald-400 font-semibold">₹${h.cost_inr}</span></div>`;
+      }).join("") + `<div class="flex justify-between pt-1 font-bold text-white"><span>Total Prototype Cost</span><span>₹${total}</span></div>`;
+
+      document.getElementById("res-pins").innerHTML = (bp.pin_connections || []).map(p => `
+        <tr><td class="p-2.5 font-mono text-sky-300">${p.from_pin}</td><td class="p-2.5 font-mono text-indigo-300">${p.to_pin}</td><td class="p-2.5">${p.signal}</td></tr>
+      `).join("");
+
+      document.getElementById("res-code-lang").innerText = `💻 ${bp.source_code_language || "Source Code"}`;
+      document.getElementById("res-code").innerText = bp.source_code || "";
+
+      document.getElementById("res-viva").innerHTML = (bp.viva_qa || []).map((v, i) => `
+        <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-1.5">
+          <p class="text-xs font-bold text-sky-300">Q${i + 1}: ${v.q_en}</p>
+          <p class="text-xs text-slate-300">${v.a_en}</p>
+          ${v.q_kn ? `<p class="text-xs font-bold text-amber-300 pt-1">ಪ್ರಶ್ನೆ: ${v.q_kn}</p><p class="text-xs text-slate-300">${v.a_kn}</p>` : ""}
+        </div>
+      `).join("");
+
+      drawCircuitDiagram(bp);
+    }
+
+    function drawCircuitDiagram(bp) {
+      const canvas = document.getElementById("circuit-canvas");
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#020617"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.08)";
+      for (let x = 0; x < canvas.width; x += 25) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+      for (let y = 0; y < canvas.height; y += 25) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+
+      ctx.fillStyle = "#38bdf8"; ctx.font = "bold 15px Space Grotesk, sans-serif";
+      ctx.fillText("SYSTEM ARCHITECTURE: " + (bp.title || "").toUpperCase().slice(0, 52), 24, 30);
+
+      const nodes = (bp.block_diagram_nodes || []).slice(0, 5);
+      const boxW = 142, boxH = 110, startX = 24, gap = 25, y = 115;
+      nodes.forEach((node, idx) => {
+        const x = startX + idx * (boxW + gap);
+        ctx.fillStyle = idx === 2 ? "#1e3a8a" : "#0f172a";
+        ctx.strokeStyle = idx === 2 ? "#38bdf8" : "#6366f1";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.roundRect(x, y, boxW, boxH, 12); ctx.fill(); ctx.stroke();
+
+        ctx.fillStyle = "#94a3b8"; ctx.font = "bold 10px Inter, sans-serif";
+        ctx.fillText(`STAGE 0${idx + 1}`, x + 12, y + 22);
+
+        ctx.fillStyle = "#f8fafc"; ctx.font = "bold 11px Inter, sans-serif";
+        const words = node.split(" ");
+        let line = "", lineY = y + 46;
+        words.forEach(w => {
+          if ((line + w).length > 17) { ctx.fillText(line, x + 12, lineY); line = w + " "; lineY += 16; }
+          else { line += w + " "; }
+        });
+        ctx.fillText(line, x + 12, lineY);
+
+        if (idx < nodes.length - 1) {
+          const ax1 = x + boxW + 3, ax2 = x + boxW + gap - 3, ay = y + boxH / 2;
+          ctx.strokeStyle = "#38bdf8"; ctx.beginPath(); ctx.moveTo(ax1, ay); ctx.lineTo(ax2, ay); ctx.stroke();
+          ctx.fillStyle = "#38bdf8"; ctx.beginPath(); ctx.moveTo(ax2, ay); ctx.lineTo(ax2 - 6, ay - 4); ctx.lineTo(ax2 - 6, ay + 4); ctx.fill();
+        }
+      });
+      ctx.fillStyle = "#64748b"; ctx.font = "11px Inter, sans-serif";
+      ctx.fillText("Generated by ProjForge AI Studio • Ready for VTU Report & PPT", 24, 335);
+    }
+
+    function downloadDiagramPNG() {
+      const link = document.createElement("a");
+      link.download = "ProjForge_Circuit_Diagram.png";
+      link.href = document.getElementById("circuit-canvas").toDataURL("image/png");
+      link.click();
+    }
+    function copySourceCode() {
+      navigator.clipboard.writeText(document.getElementById("res-code").innerText);
+      alert("Source code copied!");
+    }
+
+    async function initiateDocxDownload() {
+      if (!currentBlueprint) return;
+      const btn = document.getElementById("download-docx-btn");
+      btn.disabled = true; btn.innerText = "⏳ Preparing 15+ Page VTU DOCX...";
+      try {
+        const orderRes = await fetch("/api/create-order", { method: "POST" });
+        const orderData = await orderRes.json();
+        if (orderData.free) {
+          await triggerDocxFile({});
+        } else {
+          const rzp = new Razorpay({
+            key: orderData.key_id, amount: orderData.amount, currency: orderData.currency,
+            name: "ProjForge AI", description: "15+ Page VTU Report + Code + Bilingual Viva",
+            order_id: orderData.order_id,
+            handler: async (resp) => { await triggerDocxFile(resp); },
+            theme: { color: "#2563eb" }
+          });
+          rzp.open();
+        }
+      } catch (err) {
+        alert("Download error: " + err.message);
+      } finally {
+        btn.disabled = false; btn.innerText = "📥 Download 15+ Page VTU Report (.docx)";
+      }
+    }
+
+    async function triggerDocxFile(paymentProof) {
+      const payload = {
+        ...paymentProof,
+        blueprint: currentBlueprint,
+        student_name: (studentProfile && studentProfile.name) || "Student Name",
+        usn: (studentProfile && studentProfile.usn) || "1VT23CS001",
+        college: (studentProfile && studentProfile.college) || "VTU Affiliated Engineering College",
+        branch: document.getElementById("branch-input").value,
+        guide_name: document.getElementById("guide-input").value.trim() || "Project Guide"
+      };
+      const res = await fetch("/api/download-docx", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Failed"); }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = "ProjForge_VTU_Project_Report.docx";
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+  </script>
 </body>
-</html>"""
+</html>
+"""
 
 
-class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
-    daemon_threads = True
+# ==================== 4. FLASK API ROUTES ====================
+@app.route("/")
+def index():
+    free_active, rem_seconds = is_free_launch_active()
+    return render_template_string(
+        HTML_PAGE,
+        free_active=free_active,
+        rem_seconds=rem_seconds,
+        price_inr=PRICE_INR,
+    )
 
 
-class StudioHandler(BaseHTTPRequestHandler):
-    def log_message(self, *args):
-        pass
+@app.route("/api/generate", methods=["POST"])
+def api_generate():
+    data = request.get_json(force=True)
+    topic = data.get("topic", "").strip()
+    branch = data.get("branch", "Computer Science & Engineering").strip()
+    level = data.get("level", "3rd Year Mini-Project").strip()
+    if not topic:
+        return jsonify({"error": "Please enter a project topic."}), 400
+    blueprint = generate_project_blueprint(topic, branch, level)
+    return jsonify({"status": "ok", "blueprint": blueprint})
 
-    def send_json(self, obj, code=200):
-        raw = json.dumps(obj).encode("utf-8")
-        self.send_response(code)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(raw)))
-        self.end_headers()
-        self.wfile.write(raw)
 
-    def do_GET(self):
-        if self.path == "/manifest.json":
-            raw = MANIFEST_JSON.encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "application/manifest+json")
-            self.send_header("Content-Length", str(len(raw)))
-            self.end_headers()
-            self.wfile.write(raw)
-        elif self.path == "/sw.js":
-            raw = SW_JS.encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "application/javascript")
-            self.send_header("Content-Length", str(len(raw)))
-            self.end_headers()
-            self.wfile.write(raw)
-        elif self.path == "/robots.txt":
-            raw = ROBOTS_TXT.encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "text/plain")
-            self.send_header("Content-Length", str(len(raw)))
-            self.end_headers()
-            self.wfile.write(raw)
-        elif self.path == "/sitemap.xml":
-            raw = SITEMAP_XML.encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "application/xml")
-            self.send_header("Content-Length", str(len(raw)))
-            self.end_headers()
-            self.wfile.write(raw)
-        else:
-            raw = HTML_PAGE.encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(raw)))
-            self.end_headers()
-            self.wfile.write(raw)
+@app.route("/api/create-order", methods=["POST"])
+def create_order():
+    free_active, _ = is_free_launch_active()
+    if free_active:
+        return jsonify({"free": True})
+    if not rzp_client:
+        return jsonify({"error": "Payment gateway keys not configured yet."}), 500
+    order = rzp_client.order.create({
+        "amount": PRICE_INR * 100,
+        "currency": "INR",
+        "payment_capture": 1,
+        "notes": {"product": "ProjForge AI 15+ Page VTU Report & Code"}
+    })
+    return jsonify({
+        "free": False,
+        "order_id": order["id"],
+        "amount": order["amount"],
+        "currency": order["currency"],
+        "key_id": RAZORPAY_KEY_ID
+    })
 
-    def do_POST(self):
-        n = int(self.headers.get("Content-Length", 0))
-        body = json.loads(self.rfile.read(n).decode("utf-8")) if n else {}
-        if self.path == "/api/login":
-            contact = body.get("contact", "").strip().lower()
-            with LOCK:
-                users = load_json(DB_FILE, {})
-                if contact not in users:
-                    users[contact] = {"joined_at": time.time()}
-                    save_json(DB_FILE, users)
-                rem_sec = max(0, int(LAUNCH_END_TS - time.time()))
-                self.send_json({
-                    "is_free": is_free_period(),
-                    "hours_left": max(1, round(rem_sec / 3600))
-                })
-        elif self.path == "/api/compile":
-            self.send_json(generate_project_bundle(body.get("mode"), body.get("title", ""), body.get("branch", "Engineering"), body.get("budget", 600), body.get("extra_notes", "")))
-        elif self.path == "/api/create_order":
-            if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
-                self.send_json({"error": "Razorpay API Keys not configured yet!"}, 500)
-                return
-            try:
-                order = create_razorpay_order(PRICE_INR)
-                self.send_json({
-                    "key_id": RAZORPAY_KEY_ID,
-                    "order_id": order["id"],
-                    "amount": order["amount"]
-                })
-            except Exception as e:
-                self.send_json({"error": f"Order error: {e}"}, 500)
-        elif self.path == "/api/unlock_and_wipe":
-            if not is_free_period():
-                rzp = body.get("rzp") or {}
-                oid = rzp.get("razorpay_order_id", "")
-                pid = rzp.get("razorpay_payment_id", "")
-                sig = rzp.get("razorpay_signature", "")
-                if not (oid and pid and sig and verify_razorpay_signature(oid, pid, sig)):
-                    self.send_json({"error": "Payment signature verification failed!"}, 400)
-                    return
-                with LOCK:
-                    logs = load_json(PAY_LOG_FILE, {})
-                    logs[pid] = {"user": body.get("contact", ""), "order_id": oid, "amount": PRICE_INR, "ts": time.time()}
-                    save_json(PAY_LOG_FILE, logs)
-            docx_bytes = build_docx_bytes(body["project"], body)
-            del body
-            self.send_response(200)
-            self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-            self.send_header("Content-Length", str(len(docx_bytes)))
-            self.end_headers()
-            self.wfile.write(docx_bytes)
+
+@app.route("/api/download-docx", methods=["POST"])
+def download_docx():
+    payload = request.get_json(force=True)
+    free_active, _ = is_free_launch_active()
+    if not free_active and rzp_client:
+        payment_id = payload.get("razorpay_payment_id", "")
+        order_id = payload.get("razorpay_order_id", "")
+        signature = payload.get("razorpay_signature", "")
+        if not (payment_id and order_id and signature):
+            return jsonify({"error": "Payment verification required."}), 402
+        try:
+            rzp_client.utility.verify_payment_signature({
+                "razorpay_order_id": order_id,
+                "razorpay_payment_id": payment_id,
+                "razorpay_signature": signature
+            })
+        except Exception:
+            return jsonify({"error": "Invalid payment signature."}), 402
+
+    blueprint = payload.get("blueprint", {})
+    docx_buffer = build_vtu_docx(
+        blueprint,
+        payload.get("student_name") or "Student Name",
+        payload.get("usn") or "1VT23CS001",
+        payload.get("college") or "VTU Affiliated Engineering College",
+        payload.get("branch") or "Engineering",
+        payload.get("guide_name") or "Project Guide",
+    )
+    safe_name = "".join(c if c.isalnum() else "_" for c in blueprint.get("title", "Project_Report"))[:40]
+    return send_file(
+        docx_buffer,
+        as_attachment=True,
+        download_name=f"{safe_name}_VTU_Report.docx",
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
 
 
 if __name__ == "__main__":
-    env_port = os.environ.get("PORT")
-    port = int(env_port) if env_port else 8095
-    if not env_port:
-        for p in range(8095, 8120):
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                if s.connect_ex(("127.0.0.1", p)) != 0:
-                    port = p
-                    break
-    srv = ThreadingHTTPServer(("0.0.0.0", port), StudioHandler)
-    print(f"ProjForge running on port {port}")
-    if not env_port:
-        threading.Timer(0.6, lambda: webbrowser.open(f"http://127.0.0.1:{port}")).start()
-    srv.serve_forever()
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
