@@ -2,9 +2,8 @@ import io
 import os
 import re
 import json
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from flask import Flask, render_template_string, request, jsonify, send_file
-import razorpay
 import requests
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
@@ -16,32 +15,10 @@ from docx.oxml.ns import nsdecls
 app = Flask(__name__)
 
 # ==================== CONFIGURATION ====================
-LAUNCH_START_STR = os.environ.get("LAUNCH_START_ISO", "2026-11-23T12:00:00+00:00")
-FREE_HOURS = int(os.environ.get("FREE_LAUNCH_HOURS", "48"))
-PRICE_INR = 49
-
-RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "").strip()
-RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "").strip()
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
-rzp_client = None
-if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET:
-    rzp_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
-
-def is_free_launch_active():
-    try:
-        start_dt = datetime.fromisoformat(LAUNCH_START_STR)
-        end_dt = start_dt + timedelta(hours=FREE_HOURS)
-        now_dt = datetime.now(timezone.utc)
-        if now_dt < end_dt:
-            return True, int((end_dt - now_dt).total_seconds())
-    except Exception:
-        pass
-    return False, 0
-
-
-# ==================== 1. GEMINI AI ENGINE (VIA DIRECT REST API) ====================
+# ==================== 1. GEMINI AI ENGINE (DIRECT REST API) ====================
 def generate_project_blueprint(topic, branch, level):
     if GEMINI_API_KEY:
         try:
@@ -551,7 +528,7 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, guide_name):
     return buf
 
 
-# ==================== 3. FRONTEND HTML (4s FLASH + LOGIN + UI) ====================
+# ==================== 3. FRONTEND HTML (4s FLASH + LOGIN/LOGOUT + FREE MODE) ====================
 HTML_PAGE = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -559,7 +536,6 @@ HTML_PAGE = """<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ProjForge AI — Engineering Project & VTU Report Studio</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', sans-serif; background: #060913; color: #f1f5f9; overflow-x: hidden; }
@@ -661,30 +637,25 @@ HTML_PAGE = """<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- 3. HEADER -->
+  <!-- 3. HEADER WITH LOGOUT OPTION -->
   <header class="sticky top-0 z-40 glass border-b border-slate-800">
     <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2.5">
         <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow">PF</div>
         <div>
           <span class="brand-font font-bold text-lg text-white">ProjForge <span class="text-sky-400">AI</span></span>
-          <span class="hidden sm:inline-block ml-2 text-[11px] px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">v2.0 Pro</span>
+          <span class="hidden sm:inline-block ml-2 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Free Student Edition</span>
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
-        {% if free_active %}
-        <span class="text-xs px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-medium">
-          🎉 2-Day Free Launch Active!
-        </span>
-        {% else %}
-        <span class="text-xs px-3 py-1.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium">
-          Full 15+ Page Pack: ₹{{ price_inr }}
-        </span>
-        {% endif %}
+      <div class="flex items-center gap-2.5">
         <button onclick="openLoginModal()" id="user-badge"
           class="text-xs px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200">
           👤 Student Login
+        </button>
+        <button onclick="logoutUser()" id="logout-btn"
+          class="hidden text-xs px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-medium transition">
+          🚪 Logout
         </button>
       </div>
     </div>
@@ -761,18 +732,14 @@ HTML_PAGE = """<!DOCTYPE html>
           <p id="res-tagline" class="text-xs text-slate-400 mt-1"></p>
         </div>
 
-        <button onclick="initiateDocxDownload()" id="download-docx-btn"
+        <button onclick="downloadDocxDirect()" id="download-docx-btn"
           class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-bold text-white text-sm shadow-lg shadow-emerald-600/25 shrink-0">
-          {% if free_active %}
-          📥 Download 15+ Page VTU Report (.docx) — FREE
-          {% else %}
-          📥 Unlock &amp; Download 15+ Page .docx (₹{{ price_inr }})
-          {% endif %}
+          📥 Download 15+ Page VTU Report (.docx)
         </button>
       </div>
 
       <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
-        <button onclick="switchTab('tab-report', this)" class="tab-btn px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-semibold">📄 Watermarked Report Preview</button>
+        <button onclick="switchTab('tab-report', this)" class="tab-btn px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-semibold">📄 Report Preview</button>
         <button onclick="switchTab('tab-circuit', this)" class="tab-btn px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">🔌 Block &amp; Pin Circuit Diagram</button>
         <button onclick="switchTab('tab-code', this)" class="tab-btn px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">💻 Working Source Code</button>
         <button onclick="switchTab('tab-viva', this)" class="tab-btn px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">🎓 Viva Q&amp;A (English + ಕನ್ನಡ)</button>
@@ -868,23 +835,47 @@ HTML_PAGE = """<!DOCTYPE html>
         const s = document.getElementById("splash-screen");
         s.style.opacity = "0";
         s.style.visibility = "hidden";
-        if (!studentProfile) openLoginModal();
-        else updateUserBadge();
+        if (!studentProfile || !studentProfile.email) {
+          openLoginModal();
+        } else {
+          updateUserBadge();
+        }
       }, 3800);
     });
 
     function openLoginModal() {
+      if (studentProfile) {
+        document.getElementById("login-email").value = studentProfile.email || "";
+        document.getElementById("login-name").value = studentProfile.name === "Student Name" ? "" : (studentProfile.name || "");
+        document.getElementById("login-usn").value = studentProfile.usn === "1VT23CS001" ? "" : (studentProfile.usn || "");
+        document.getElementById("login-college").value = studentProfile.college || "";
+      }
       const m = document.getElementById("login-modal");
       m.classList.remove("hidden"); m.classList.add("flex");
     }
+
     function closeLoginModal() {
       const m = document.getElementById("login-modal");
       m.classList.add("hidden"); m.classList.remove("flex");
     }
+
     function skipLogin() {
-      if (!studentProfile) studentProfile = { email: "", name: "Student Name", usn: "1VT23CS001", college: "VTU Affiliated Engineering College" };
+      studentProfile = { email: "", name: "Guest Student", usn: "1VT23CS001", college: "VTU Affiliated Engineering College" };
+      updateUserBadge();
       closeLoginModal();
     }
+
+    function logoutUser() {
+      localStorage.removeItem("pf_student");
+      studentProfile = null;
+      currentBlueprint = null;
+      document.getElementById("login-form").reset();
+      document.getElementById("result-section").classList.add("hidden");
+      document.getElementById("user-badge").innerText = "👤 Student Login";
+      document.getElementById("logout-btn").classList.add("hidden");
+      openLoginModal();
+    }
+
     document.getElementById("login-form").addEventListener("submit", (e) => {
       e.preventDefault();
       studentProfile = {
@@ -897,12 +888,16 @@ HTML_PAGE = """<!DOCTYPE html>
       updateUserBadge();
       closeLoginModal();
     });
+
     function updateUserBadge() {
       if (studentProfile && studentProfile.name) {
         document.getElementById("user-badge").innerText = `👤 ${studentProfile.name} (${studentProfile.usn})`;
+        document.getElementById("logout-btn").classList.remove("hidden");
       }
     }
+
     function setSample(txt) { document.getElementById("topic-input").value = txt; }
+
     function switchTab(tabId, btn) {
       document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
       document.getElementById(tabId).classList.remove("hidden");
@@ -1019,55 +1014,46 @@ HTML_PAGE = """<!DOCTYPE html>
       link.href = document.getElementById("circuit-canvas").toDataURL("image/png");
       link.click();
     }
+
     function copySourceCode() {
       navigator.clipboard.writeText(document.getElementById("res-code").innerText);
       alert("Source code copied!");
     }
 
-    async function initiateDocxDownload() {
+    async function downloadDocxDirect() {
       if (!currentBlueprint) return;
       const btn = document.getElementById("download-docx-btn");
-      btn.disabled = true; btn.innerText = "⏳ Preparing 15+ Page VTU DOCX...";
+      btn.disabled = true;
+      btn.innerText = "⏳ Preparing 15+ Page VTU DOCX...";
       try {
-        const orderRes = await fetch("/api/create-order", { method: "POST" });
-        const orderData = await orderRes.json();
-        if (orderData.free) {
-          await triggerDocxFile({});
-        } else {
-          const rzp = new Razorpay({
-            key: orderData.key_id, amount: orderData.amount, currency: orderData.currency,
-            name: "ProjForge AI", description: "15+ Page VTU Report + Code + Bilingual Viva",
-            order_id: orderData.order_id,
-            handler: async (resp) => { await triggerDocxFile(resp); },
-            theme: { color: "#2563eb" }
-          });
-          rzp.open();
-        }
+        const payload = {
+          blueprint: currentBlueprint,
+          student_name: (studentProfile && studentProfile.name) || "Student Name",
+          usn: (studentProfile && studentProfile.usn) || "1VT23CS001",
+          college: (studentProfile && studentProfile.college) || "VTU Affiliated Engineering College",
+          branch: document.getElementById("branch-input").value,
+          guide_name: document.getElementById("guide-input").value.trim() || "Project Guide"
+        };
+        const res = await fetch("/api/download-docx", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Failed"); }
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "ProjForge_VTU_Project_Report.docx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
       } catch (err) {
         alert("Download error: " + err.message);
       } finally {
-        btn.disabled = false; btn.innerText = "📥 Download 15+ Page VTU Report (.docx)";
+        btn.disabled = false;
+        btn.innerText = "📥 Download 15+ Page VTU Report (.docx)";
       }
-    }
-
-    async function triggerDocxFile(paymentProof) {
-      const payload = {
-        ...paymentProof,
-        blueprint: currentBlueprint,
-        student_name: (studentProfile && studentProfile.name) || "Student Name",
-        usn: (studentProfile && studentProfile.usn) || "1VT23CS001",
-        college: (studentProfile && studentProfile.college) || "VTU Affiliated Engineering College",
-        branch: document.getElementById("branch-input").value,
-        guide_name: document.getElementById("guide-input").value.trim() || "Project Guide"
-      };
-      const res = await fetch("/api/download-docx", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
-      });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Failed"); }
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = "ProjForge_VTU_Project_Report.docx";
-      document.body.appendChild(a); a.click(); a.remove();
     }
   </script>
 </body>
@@ -1078,13 +1064,7 @@ HTML_PAGE = """<!DOCTYPE html>
 # ==================== 4. FLASK API ROUTES ====================
 @app.route("/")
 def index():
-    free_active, rem_seconds = is_free_launch_active()
-    return render_template_string(
-        HTML_PAGE,
-        free_active=free_active,
-        rem_seconds=rem_seconds,
-        price_inr=PRICE_INR,
-    )
+    return render_template_string(HTML_PAGE)
 
 
 @app.route("/api/generate", methods=["POST"])
@@ -1099,47 +1079,9 @@ def api_generate():
     return jsonify({"status": "ok", "blueprint": blueprint})
 
 
-@app.route("/api/create-order", methods=["POST"])
-def create_order():
-    free_active, _ = is_free_launch_active()
-    if free_active:
-        return jsonify({"free": True})
-    if not rzp_client:
-        return jsonify({"error": "Payment gateway keys not configured yet."}), 500
-    order = rzp_client.order.create({
-        "amount": PRICE_INR * 100,
-        "currency": "INR",
-        "payment_capture": 1,
-        "notes": {"product": "ProjForge AI 15+ Page VTU Report & Code"}
-    })
-    return jsonify({
-        "free": False,
-        "order_id": order["id"],
-        "amount": order["amount"],
-        "currency": order["currency"],
-        "key_id": RAZORPAY_KEY_ID
-    })
-
-
 @app.route("/api/download-docx", methods=["POST"])
 def download_docx():
     payload = request.get_json(force=True)
-    free_active, _ = is_free_launch_active()
-    if not free_active and rzp_client:
-        payment_id = payload.get("razorpay_payment_id", "")
-        order_id = payload.get("razorpay_order_id", "")
-        signature = payload.get("razorpay_signature", "")
-        if not (payment_id and order_id and signature):
-            return jsonify({"error": "Payment verification required."}), 402
-        try:
-            rzp_client.utility.verify_payment_signature({
-                "razorpay_order_id": order_id,
-                "razorpay_payment_id": payment_id,
-                "razorpay_signature": signature
-            })
-        except Exception:
-            return jsonify({"error": "Invalid payment signature."}), 402
-
     blueprint = payload.get("blueprint", {})
     docx_buffer = build_vtu_docx(
         blueprint,
