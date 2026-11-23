@@ -163,22 +163,16 @@ def _smart_topic_blueprint(topic, branch, subject, level):
             {"name": "9V DC Battery + 830-Pt Breadboard", "spec": "Solderless Prototyping Setup", "cost_inr": 190}
         ]
         prim_lang = "Python 3 (IC 741 Comparator Threshold Simulator)"
-        prim_code = f"""# ============================================================================
-# Project: {clean_title}
-# Subject: {subject} ({branch})
-# IC 741 Operational Amplifier Open-Loop Comparator Simulation
-# ============================================================================
-
+        prim_code = f"""# Project: {clean_title} | Subject: {subject}
 VCC = 9.0
-V_REF = 4.5  # Set via 10k Potentiometer at Pin 2 (-IN)
+V_REF = 4.5
 
 def ic741_comparator(v_non_inverting):
     v_out = (VCC - 0.8) if v_non_inverting > V_REF else 0.2
     led_state = "ON (TANK FULL)" if v_out > 5.0 else "OFF (BELOW LEVEL)"
-    print(f"Pin3(+IN)={{v_non_inverting:.1f}}V | Pin2(-IN)={{V_REF}}V -> Pin6(OUT)={{v_out:.1f}}V | LED: {{led_state}}")
+    print(f"Pin3(+IN)={{v_non_inverting:.1f}}V -> Pin6(OUT)={{v_out:.1f}}V | LED: {{led_state}}")
 
 if __name__ == "__main__":
-    print("=== {clean_title} — IC 741 Analysis ===")
     for probe_v in [1.2, 3.4, 4.8, 7.5]:
         ic741_comparator(probe_v)
 """
@@ -202,31 +196,13 @@ if __name__ == "__main__":
             {"name": "830-Point Breadboard & Jumpers", "spec": "Solderless Prototyping Board", "cost_inr": 140}
         ]
         prim_lang = "Arduino C++ (.ino) — Automated Irrigation Firmware"
-        prim_code = f"""// ============================================================================
-// Project: {clean_title}
-// Subject: {subject} ({branch})
-// ============================================================================
-
+        prim_code = f"""// Project: {clean_title}
 #define MOISTURE_PIN A0
 #define PUMP_RELAY   7
-#define DRY_THRESHOLD 620
-
-void setup() {{
-  Serial.begin(115200);
-  pinMode(PUMP_RELAY, OUTPUT);
-  digitalWrite(PUMP_RELAY, HIGH);
-  Serial.println("SMART IRRIGATION SYSTEM INITIALIZED");
-}}
-
+void setup() {{ Serial.begin(115200); pinMode(PUMP_RELAY, OUTPUT); }}
 void loop() {{
-  int moistureVal = analogRead(MOISTURE_PIN);
-  if (moistureVal > DRY_THRESHOLD) {{
-    digitalWrite(PUMP_RELAY, LOW);
-    Serial.println("[DRY SOIL] Water Pump -> ON");
-  }} else {{
-    digitalWrite(PUMP_RELAY, HIGH);
-    Serial.println("[WET SOIL] Water Pump -> OFF");
-  }}
+  int val = analogRead(MOISTURE_PIN);
+  digitalWrite(PUMP_RELAY, val > 620 ? LOW : HIGH);
   delay(500);
 }}
 """
@@ -250,7 +226,9 @@ void loop() {{
             {"name": "830-Point Breadboard & Jumpers", "spec": "Prototyping Board", "cost_inr": 140}
         ]
         prim_lang = "Arduino C++ (.ino)"
-        prim_code = f"// Firmware for {clean_title}\nvoid setup() {{ Serial.begin(115200); }}\nvoid loop() {{ Serial.println(\"Active: {clean_title}\"); delay(300); }}"
+        prim_code = f"""// Firmware for {clean_title}
+void setup() {{ Serial.begin(115200); }}
+void loop() {{ Serial.println("Active: {clean_title}"); delay(300); }}"""
     else:
         controller_name = "Software-Only Architecture"
         parts = []
@@ -260,25 +238,15 @@ void loop() {{
             {"name": "Python 3.11 & Cloud Database", "spec": "Open-Source Runtime Stack", "cost_inr": 0}
         ]
         prim_lang = f"Python 3 ({subject} Implementation)"
-        prim_code = f"""# ============================================================================
-# Project: {clean_title}
-# Branch : {branch} | Subject: {subject}
-# ============================================================================
-
+        prim_code = f"""# Project: {clean_title} | Subject: {subject}
 from datetime import datetime
 
 class SystemService:
-    def __init__(self):
-        self.logs = []
-
     def execute(self, record):
-        entry = {{"timestamp": datetime.now().isoformat(), "payload": record, "verified": True}}
-        self.logs.append(entry)
-        return entry
+        return {{"timestamp": datetime.now().isoformat(), "payload": record, "verified": True}}
 
 if __name__ == "__main__":
-    svc = SystemService()
-    print(svc.execute({{"project": "{clean_title}", "subject": "{subject}"}}))
+    print(SystemService().execute({{"project": "{clean_title}"}}))
 """
 
     return {
@@ -625,14 +593,17 @@ def build_vtu_docx(blueprint, student_name, usn, college, branch, subject, guide
     return buf
 
 
-# ==================== 3. FRONTEND HTML (ERROR-FREE + AUTO-HIDE SPLASH) ====================
-HTML_PAGE = """<!DOCTYPE html>
+# ==================== 3. FRONTEND HTML (100% VALID JS + PWA MANIFEST) ====================
+HTML_PAGE = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
   <title>ProjForge AI — Studio</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+  <link rel="apple-touch-icon" href="/favicon.ico" />
+  <link rel="manifest" href="/manifest.json" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -648,26 +619,18 @@ HTML_PAGE = """<!DOCTYPE html>
     h1, h2, h3, .brand-font { font-family: 'Space Grotesk', sans-serif; }
     code, pre { font-family: 'JetBrains Mono', monospace; }
 
-    /* Guaranteed CSS + JS Splash Auto-Dismiss */
     #splash-screen {
       position: fixed; inset: 0; z-index: 9999;
       background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      animation: splashAutoOut 0.45s ease 1.3s forwards;
+      animation: splashAutoOut 0.4s ease 1.1s forwards;
     }
     @keyframes splashAutoOut {
       to { opacity: 0; visibility: hidden; pointer-events: none; }
     }
-    .logo-pulse {
-      animation: pulseGlow 1.1s ease-in-out infinite alternate;
-    }
-    @keyframes pulseGlow {
-      from { transform: scale(0.95); filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.4)); }
-      to { transform: scale(1.04); filter: drop-shadow(0 0 26px rgba(99, 102, 241, 0.75)); }
-    }
 
     .glass {
-      background: rgba(15, 23, 42, 0.84);
+      background: rgba(15, 23, 42, 0.86);
       backdrop-filter: blur(18px);
       border: 1px solid rgba(148, 163, 184, 0.14);
       box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.55);
@@ -688,21 +651,19 @@ HTML_PAGE = """<!DOCTYPE html>
 
   <!-- 1. SPLASH SCREEN -->
   <div id="splash-screen">
-    <div class="logo-pulse">
-      <svg width="84" height="84" viewBox="0 0 88 88" fill="none">
-        <defs>
-          <linearGradient id="pfGrad" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#38BDF8"/>
-            <stop offset="0.5" stop-color="#6366F1"/>
-            <stop offset="1" stop-color="#A855F7"/>
-          </linearGradient>
-        </defs>
-        <rect x="6" y="6" width="76" height="76" rx="22" fill="url(#pfGrad)"/>
-        <path d="M28 44H38L43 31L49 57L54 44H62" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="26" cy="44" r="3.5" fill="white"/>
-        <circle cx="62" cy="44" r="3.5" fill="white"/>
-      </svg>
-    </div>
+    <svg width="84" height="84" viewBox="0 0 88 88" fill="none">
+      <defs>
+        <linearGradient id="pfGrad" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#38BDF8"/>
+          <stop offset="0.5" stop-color="#6366F1"/>
+          <stop offset="1" stop-color="#A855F7"/>
+        </linearGradient>
+      </defs>
+      <rect x="6" y="6" width="76" height="76" rx="22" fill="url(#pfGrad)"/>
+      <path d="M28 44H38L43 31L49 57L54 44H62" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="26" cy="44" r="3.5" fill="white"/>
+      <circle cx="62" cy="44" r="3.5" fill="white"/>
+    </svg>
     <h1 class="text-2xl font-bold mt-4 bg-gradient-to-r from-sky-400 via-indigo-300 to-purple-300 bg-clip-text text-transparent">
       ProjForge AI
     </h1>
@@ -741,26 +702,26 @@ HTML_PAGE = """<!DOCTYPE html>
           Save &amp; Enter Studio →
         </button>
       </form>
-      <button onclick="skipLogin()" class="w-full mt-3 text-xs text-slate-400 hover:text-slate-200 underline">Continue as Guest</button>
+      <button type="button" onclick="skipLogin()" class="w-full mt-3 text-xs text-slate-400 hover:text-slate-200 underline">Continue as Guest</button>
     </div>
   </div>
 
   <!-- 3. REFER FRIENDS MODAL -->
   <div id="refer-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
     <div class="glass max-w-md w-full rounded-2xl p-6 border border-indigo-500/40 relative">
-      <button onclick="closeReferModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-sm">✕</button>
+      <button type="button" onclick="closeReferModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-sm">✕</button>
       <h2 class="text-base font-bold text-white">🎁 Refer Friends &amp; Classmates</h2>
       <p class="text-xs text-slate-400 mt-1">Share ProjForge AI with your engineering batchmates</p>
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 mt-3">
         <span class="text-[10px] text-slate-400">Your Referral Code:</span>
         <div class="flex items-center justify-between mt-1">
           <span id="my-ref-code" class="font-mono font-bold text-sm text-sky-400">PF-STUDENT</span>
-          <button onclick="copyRefCode()" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200">Copy</button>
+          <button type="button" onclick="copyRefCode()" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200">Copy</button>
         </div>
       </div>
       <div class="grid grid-cols-2 gap-2.5 mt-4">
-        <button onclick="shareOnWhatsApp()" class="py-2.5 px-3 rounded-xl bg-emerald-600 font-semibold text-white text-xs">💬 WhatsApp Share</button>
-        <button onclick="copyInviteLink()" class="py-2.5 px-3 rounded-xl bg-indigo-600 font-semibold text-white text-xs">🔗 Copy Link</button>
+        <button type="button" onclick="shareOnWhatsApp()" class="py-2.5 px-3 rounded-xl bg-emerald-600 font-semibold text-white text-xs">💬 WhatsApp Share</button>
+        <button type="button" onclick="copyInviteLink()" class="py-2.5 px-3 rounded-xl bg-indigo-600 font-semibold text-white text-xs">🔗 Copy Link</button>
       </div>
     </div>
   </div>
@@ -768,7 +729,7 @@ HTML_PAGE = """<!DOCTYPE html>
   <!-- 4. POST-DOWNLOAD STUDENT FEEDBACK MODAL -->
   <div id="feedback-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
     <div class="glass max-w-md w-full rounded-2xl p-6 border border-emerald-500/40 relative">
-      <button onclick="closeFeedbackModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-sm">✕</button>
+      <button type="button" onclick="closeFeedbackModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-sm">✕</button>
       <div class="flex items-center gap-2.5 mb-2">
         <span class="text-2xl">✅</span>
         <div>
@@ -830,14 +791,14 @@ HTML_PAGE = """<!DOCTYPE html>
       </div>
 
       <nav class="hidden md:flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
-        <button onclick="navigatePage('page-home')" id="nav-d-home" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white">🏠 Create</button>
-        <button onclick="navigatePage('page-3d')" id="nav-d-3d" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">🧊 Circuit / Flow</button>
-        <button onclick="navigatePage('page-code')" id="nav-d-code" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">💻 Code &amp; Voice Viva</button>
-        <button onclick="navigatePage('page-report')" id="nav-d-report" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">📄 Report &amp; PPT</button>
+        <button type="button" onclick="navigatePage('page-home')" id="nav-d-home" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white">🏠 Create</button>
+        <button type="button" onclick="navigatePage('page-3d')" id="nav-d-3d" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">🧊 Circuit / Flow</button>
+        <button type="button" onclick="navigatePage('page-code')" id="nav-d-code" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">💻 Code &amp; Voice Viva</button>
+        <button type="button" onclick="navigatePage('page-report')" id="nav-d-report" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300">📄 Report &amp; PPT</button>
       </nav>
 
       <div class="relative">
-        <button onclick="toggleProfileMenu()" id="profile-trigger"
+        <button type="button" onclick="toggleProfileMenu()" id="profile-trigger"
           class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200 transition">
           <span id="avatar-initial" class="w-6 h-6 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-[11px] text-white">G</span>
           <span id="profile-short-name" class="max-w-[85px] truncate font-medium">Guest</span>
@@ -849,14 +810,14 @@ HTML_PAGE = """<!DOCTYPE html>
             <p id="menu-full-name" class="text-xs font-bold text-white truncate">Guest Student</p>
             <p id="menu-usn" class="text-[11px] text-sky-400 font-mono">1VT23CS001</p>
           </div>
-          <button onclick="closeProfileMenu(); openLoginModal();" class="w-full text-left px-4 py-2.5 text-xs text-slate-200 hover:bg-slate-800/80 flex items-center gap-2">
+          <button type="button" onclick="closeProfileMenu(); openLoginModal();" class="w-full text-left px-4 py-2.5 text-xs text-slate-200 hover:bg-slate-800/80 flex items-center gap-2">
             <span>✏️</span> Edit Student Profile
           </button>
-          <button onclick="closeProfileMenu(); openReferModal();" class="w-full text-left px-4 py-2.5 text-xs text-indigo-300 hover:bg-slate-800/80 flex items-center gap-2">
+          <button type="button" onclick="closeProfileMenu(); openReferModal();" class="w-full text-left px-4 py-2.5 text-xs text-indigo-300 hover:bg-slate-800/80 flex items-center gap-2">
             <span>🎁</span> Refer Friends
           </button>
           <div class="border-t border-slate-800 my-1"></div>
-          <button onclick="closeProfileMenu(); logoutUser();" class="w-full text-left px-4 py-2.5 text-xs text-rose-400 hover:bg-rose-500/15 font-semibold flex items-center gap-2">
+          <button type="button" onclick="closeProfileMenu(); logoutUser();" class="w-full text-left px-4 py-2.5 text-xs text-rose-400 hover:bg-rose-500/15 font-semibold flex items-center gap-2">
             <span>🚪</span> Logout
           </button>
         </div>
@@ -934,7 +895,7 @@ HTML_PAGE = """<!DOCTYPE html>
           </div>
         </div>
 
-        <button id="generate-btn" onclick="generateProject()"
+        <button type="button" id="generate-btn" onclick="generateProject()"
           class="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:opacity-95 font-bold text-white text-sm sm:text-base shadow-lg shadow-blue-600/25 transition">
           ⚡ Run AI Verification &amp; Build Complete Project
         </button>
@@ -969,11 +930,11 @@ HTML_PAGE = """<!DOCTYPE html>
             <p class="text-xs text-slate-400">Drag 1-Finger to Rotate 360° • Pinch / Scroll to Zoom • Test Sensor Input Below</p>
           </div>
           <div class="flex flex-wrap gap-2">
-            <button onclick="toggle3DSimulation()" id="sim-toggle-btn"
+            <button type="button" onclick="toggle3DSimulation()" id="sim-toggle-btn"
               class="px-3.5 py-2 rounded-xl bg-emerald-600 font-bold text-white text-xs shadow">
               ▶ Simulation: ON
             </button>
-            <button onclick="reset3DCamera()"
+            <button type="button" onclick="reset3DCamera()"
               class="px-3 py-2 rounded-xl bg-slate-800 text-xs text-slate-200 border border-slate-700">
               🔄 Reset View
             </button>
@@ -1030,23 +991,23 @@ HTML_PAGE = """<!DOCTYPE html>
     <section id="page-code" class="page-section space-y-5">
       <div id="empty-code" class="glass rounded-2xl p-8 text-center">
         <p class="text-sm text-slate-400">Generate a project first to view source code and 5-language Voice Viva Q&amp;A.</p>
-        <button onclick="navigatePage('page-home')" class="mt-3 px-4 py-2 rounded-xl bg-sky-600 text-xs font-semibold text-white">Go to Create →</button>
+        <button type="button" onclick="navigatePage('page-home')" class="mt-3 px-4 py-2 rounded-xl bg-sky-600 text-xs font-semibold text-white">Go to Create →</button>
       </div>
 
       <div id="content-code" class="hidden space-y-5">
         <div class="glass rounded-2xl p-5 space-y-3">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div class="flex flex-wrap gap-2">
-              <button onclick="switchCodeMode('primary')" id="btn-code-primary"
+              <button type="button" onclick="switchCodeMode('primary')" id="btn-code-primary"
                 class="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold">
                 💻 Main Project Code
               </button>
-              <button onclick="switchCodeMode('arduino')" id="btn-code-arduino"
+              <button type="button" onclick="switchCodeMode('arduino')" id="btn-code-arduino"
                 class="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-700">
                 🔌 Optional Arduino Dump Code (.ino)
               </button>
             </div>
-            <button onclick="copySourceCode()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-sky-300 border border-slate-700 self-start">
+            <button type="button" onclick="copySourceCode()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-sky-300 border border-slate-700 self-start">
               📋 Copy Code
             </button>
           </div>
@@ -1061,11 +1022,11 @@ HTML_PAGE = """<!DOCTYPE html>
               <p class="text-xs text-slate-400">Select one language &amp; click 🔊 Listen to practice viva pronunciation</p>
             </div>
             <div class="flex flex-wrap gap-1.5">
-              <button onclick="selectVivaLang('en', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-bold">English</button>
-              <button onclick="selectVivaLang('kn', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold">ಕನ್ನಡ</button>
-              <button onclick="selectVivaLang('hi', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold">हिन्दी</button>
-              <button onclick="selectVivaLang('te', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold">తెలుగు</button>
-              <button onclick="selectVivaLang('ta', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold">தமிழ்</button>
+              <button type="button" onclick="selectVivaLang('en', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-bold">English</button>
+              <button type="button" onclick="selectVivaLang('kn', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold">ಕನ್ನಡ</button>
+              <button type="button" onclick="selectVivaLang('hi', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold">हिन्दी</button>
+              <button type="button" onclick="selectVivaLang('te', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold">తెలుగు</button>
+              <button type="button" onclick="selectVivaLang('ta', this)" class="viva-lang-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold">தமிழ்</button>
             </div>
           </div>
           <div id="viva-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5"></div>
@@ -1077,7 +1038,7 @@ HTML_PAGE = """<!DOCTYPE html>
     <section id="page-report" class="page-section space-y-5">
       <div id="empty-report" class="glass rounded-2xl p-8 text-center">
         <p class="text-sm text-slate-400">Generate a project first to customize and download your 15+ page VTU .docx report.</p>
-        <button onclick="navigatePage('page-home')" class="mt-3 px-4 py-2 rounded-xl bg-sky-600 text-xs font-semibold text-white">Go to Create →</button>
+        <button type="button" onclick="navigatePage('page-home')" class="mt-3 px-4 py-2 rounded-xl bg-sky-600 text-xs font-semibold text-white">Go to Create →</button>
       </div>
 
       <div id="content-report" class="hidden space-y-5">
@@ -1087,7 +1048,7 @@ HTML_PAGE = """<!DOCTYPE html>
               <span class="text-[11px] uppercase tracking-wider text-emerald-400 font-bold">VTU / College Report Formatting Tools</span>
               <h2 id="rep-title" class="text-lg sm:text-xl font-bold text-white mt-0.5"></h2>
             </div>
-            <button onclick="downloadDocxDirect()" id="download-docx-btn"
+            <button type="button" onclick="downloadDocxDirect()" id="download-docx-btn"
               class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 font-bold text-white text-xs sm:text-sm shadow-lg shrink-0">
               📥 Download 15+ Page .docx Report
             </button>
@@ -1142,7 +1103,7 @@ HTML_PAGE = """<!DOCTYPE html>
           <div class="glass rounded-2xl p-5">
             <div class="flex items-center justify-between mb-2">
               <h3 class="text-sm font-bold text-indigo-300">📊 Seminar PPT Slide Deck</h3>
-              <button onclick="copyPptSlides()" class="text-[11px] px-2.5 py-1 rounded bg-slate-800 text-sky-300 border border-slate-700">📋 Copy PPT</button>
+              <button type="button" onclick="copyPptSlides()" class="text-[11px] px-2.5 py-1 rounded bg-slate-800 text-sky-300 border border-slate-700">📋 Copy PPT</button>
             </div>
             <div id="rep-ppt" class="text-xs text-slate-300 space-y-2"></div>
           </div>
@@ -1153,16 +1114,16 @@ HTML_PAGE = """<!DOCTYPE html>
 
   <!-- MOBILE BOTTOM NAVIGATION -->
   <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-slate-800 grid grid-cols-4 py-1.5 px-1">
-    <button onclick="navigatePage('page-home')" id="nav-m-home" class="nav-m-btn flex flex-col items-center py-1 text-sky-400 font-bold">
+    <button type="button" onclick="navigatePage('page-home')" id="nav-m-home" class="nav-m-btn flex flex-col items-center py-1 text-sky-400 font-bold">
       <span class="text-base">🏠</span><span class="text-[10px]">Create</span>
     </button>
-    <button onclick="navigatePage('page-3d')" id="nav-m-3d" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
+    <button type="button" onclick="navigatePage('page-3d')" id="nav-m-3d" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
       <span class="text-base">🧊</span><span class="text-[10px]">Circuit/Flow</span>
     </button>
-    <button onclick="navigatePage('page-code')" id="nav-m-code" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
+    <button type="button" onclick="navigatePage('page-code')" id="nav-m-code" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
       <span class="text-base">💻</span><span class="text-[10px]">Code/Viva</span>
     </button>
-    <button onclick="navigatePage('page-report')" id="nav-m-report" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
+    <button type="button" onclick="navigatePage('page-report')" id="nav-m-report" class="nav-m-btn flex flex-col items-center py-1 text-slate-400">
       <span class="text-base">📄</span><span class="text-[10px]">Report/PPT</span>
     </button>
   </nav>
@@ -1274,7 +1235,7 @@ HTML_PAGE = """<!DOCTYPE html>
         dismissSplash();
         if (!studentProfile || !studentProfile.email) openLoginModal();
         else updateProfileUI();
-      }, 1200);
+      }, 1150);
 
       try {
         initThreeJS();
@@ -1359,10 +1320,11 @@ HTML_PAGE = """<!DOCTYPE html>
       const m = document.getElementById("refer-modal"); m.classList.add("hidden"); m.classList.remove("flex");
     }
     function copyRefCode() { navigator.clipboard.writeText(getReferralCode()); alert("Code copied!"); }
-    function copyInviteLink() { navigator.clipboard.writeText(`${window.location.origin}/?ref=${getReferralCode()}`); alert("Invite link copied!"); }
+    function copyInviteLink() { navigator.clipboard.writeText(window.location.origin + "/?ref=" + getReferralCode()); alert("Invite link copied!"); }
     function shareOnWhatsApp() {
-      const link = `${window.location.origin}/?ref=${getReferralCode()}`;
-      window.open("https://wa.me/?text=" + encodeURIComponent(`🚀 Build Subject-Aligned Engineering Projects, 3D Circuits & VTU Reports:\n${link}`), "_blank");
+      const link = window.location.origin + "/?ref=" + getReferralCode();
+      const text = "Build Subject-Aligned Engineering Projects, 3D Circuits & VTU Reports on ProjForge AI: " + link;
+      window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
     }
 
     function openFeedbackModal() {
@@ -1404,7 +1366,7 @@ HTML_PAGE = """<!DOCTYPE html>
       if (!recentBlueprints.length) return box.classList.add("hidden");
       box.classList.remove("hidden");
       list.innerHTML = recentBlueprints.map((item, idx) => `
-        <button onclick="loadRecent(${idx})" class="text-xs px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-sky-300 truncate max-w-[240px]">
+        <button type="button" onclick="loadRecent(${idx})" class="text-xs px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-sky-300 truncate max-w-[240px]">
           📌 ${item.title}
         </button>
       `).join("");
@@ -1510,7 +1472,7 @@ HTML_PAGE = """<!DOCTYPE html>
 
     function copyPptSlides() {
       if (!currentBlueprint) return;
-      const txt = (currentBlueprint.ppt_slides || []).map(s => `${s.slide}\n- ${s.points}`).join("\n\n");
+      const txt = (currentBlueprint.ppt_slides || []).map(s => s.slide + " - " + s.points).join(" | ");
       navigator.clipboard.writeText(txt);
       alert("Seminar PPT outline copied!");
     }
@@ -1570,7 +1532,7 @@ HTML_PAGE = """<!DOCTYPE html>
           <div class="bg-slate-900/95 p-4 rounded-xl border border-slate-800 space-y-2">
             <div class="flex items-start justify-between gap-2">
               <p class="text-xs font-bold text-sky-300">Q${idx + 1}. ${entry.q || ""}</p>
-              <button onclick="speakVivaByIndex(${idx})" class="shrink-0 text-[10px] px-2 py-1 rounded bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/30">
+              <button type="button" onclick="speakVivaByIndex(${idx})" class="shrink-0 text-[10px] px-2 py-1 rounded bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/30">
                 🔊 Listen
               </button>
             </div>
@@ -1902,14 +1864,43 @@ HTML_PAGE = """<!DOCTYPE html>
 """
 
 
-# ==================== 4. FLASK API ROUTES ====================
+# ==================== 4. FLASK API ROUTES & PWA MANIFEST ====================
 @app.route("/favicon.ico")
 def favicon():
-    svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-      <rect width="64" height="64" rx="16" fill="#2563eb"/>
-      <path d="M16 32h9l5-12 6 24 5-12h7" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#38BDF8"/>
+          <stop offset="0.5" stop-color="#6366F1"/>
+          <stop offset="1" stop-color="#A855F7"/>
+        </linearGradient>
+      </defs>
+      <rect width="88" height="88" rx="22" fill="url(#g)"/>
+      <path d="M24 44H36L42 29L49 59L55 44H65" stroke="#fff" stroke-width="5.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="23" cy="44" r="4" fill="#fff"/>
+      <circle cx="65" cy="44" r="4" fill="#fff"/>
     </svg>'''
     return Response(svg, mimetype="image/svg+xml")
+
+
+@app.route("/manifest.json")
+def manifest():
+    return jsonify({
+        "name": "ProjForge AI Studio",
+        "short_name": "ProjForge AI",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#050811",
+        "theme_color": "#0f172a",
+        "icons": [
+            {
+                "src": "/favicon.ico",
+                "sizes": "192x192 512x512",
+                "type": "image/svg+xml",
+                "purpose": "any maskable"
+            }
+        ]
+    })
 
 
 @app.route("/")
