@@ -22,25 +22,25 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 FEEDBACK_LOG = []
 
 
-# ==================== 1. SILENT BACKGROUND AI ENGINE ====================
+# ==================== 1. FAST & TIMEOUT-PROOF AI ENGINE ====================
 def generate_project_blueprint(topic, branch, subject, level):
     if GEMINI_API_KEY:
         prompt = f"""
-You are a Senior Indian Engineering Professor (VTU / Autonomous / AICTE curriculum) and Principal Systems Architect.
-Generate a comprehensive, subject-aligned engineering project blueprint in strict JSON format for:
+You are a Senior Indian Engineering Professor (VTU / Autonomous / AICTE).
+Generate a complete, subject-aligned engineering project blueprint in strict JSON for:
 - Project Title: "{topic}"
 - Engineering Branch: "{branch}"
 - Core Academic Subject: "{subject}"
 - Academic Level: "{level}"
 
-STRICT TECHNICAL RULES:
-1. Domain & Subject Precision: Every calculation, IC/sensor model, algorithm, and viva question MUST strictly match "{topic}" under "{subject}".
-2. "requires_circuit": true ONLY IF physical electronics, analog/digital ICs, sensors, microcontrollers, or motors are used. false for pure software/DBMS/Web/AI software-only projects.
+STRICT RULES:
+1. Tailor every component, equation, code snippet, and viva question strictly to "{topic}" under "{subject}".
+2. "requires_circuit": true ONLY IF physical electronics, ICs, sensors, microcontrollers, or motors are used. false for pure software/DBMS/Web/AI software-only projects.
 3. If "requires_circuit" is true:
-   - Choose 3 to 4 realistic hardware modules from: ["ic_741", "ic_lm324", "sensor_water_probes", "sensor_soil_moisture", "sensor_ultrasonic", "sensor_gas", "sensor_ir", "water_pump", "motor_servo", "relay_module", "oled_display", "piezo_buzzer", "led_indicator_bank"].
+   - Choose 3 realistic hardware modules from: ["ic_741", "ic_lm324", "sensor_water_probes", "sensor_soil_moisture", "sensor_ultrasonic", "sensor_gas", "sensor_ir", "water_pump", "motor_servo", "relay_module", "oled_display", "piezo_buzzer", "led_indicator_bank"].
    - Set "controller_or_supply" accurately (e.g., "9V DC Analog Supply (No MCU)" for analog IC circuits, or "Arduino Uno R3" / "ESP32 DevKit").
-4. "primary_code": Write 85-115 lines of clean, runnable, well-commented code matching the exact subject.
-5. "viva_qa": Provide 8 deep technical viva questions & answers translated naturally into all 5 languages: "en", "kn", "hi", "te", "ta".
+4. "primary_code": Write 75-95 lines of clean, runnable, well-commented code matching the exact subject.
+5. "viva_qa": Provide 6 deep technical viva questions & answers translated naturally into all 5 languages: "en", "kn", "hi", "te", "ta".
 
 Return ONLY valid JSON (no markdown fences):
 {{
@@ -53,8 +53,8 @@ Return ONLY valid JSON (no markdown fences):
     "build_time": "2 to 3 Days",
     "expert_note": "Component tolerances, circuit equations, and architecture verified for Indian engineering lab standards."
   }},
-  "abstract": "Detailed 300-word academic abstract covering problem statement, {subject} principles, design methodology, and quantitative outcomes.",
-  "problem_statement": "Detailed 200-word problem definition explaining existing limitations.",
+  "abstract": "Detailed 250-word academic abstract covering problem statement, {subject} principles, design methodology, and quantitative outcomes.",
+  "problem_statement": "Detailed 160-word problem definition explaining existing limitations.",
   "objectives": ["Objective 1", "Objective 2", "Objective 3", "Objective 4", "Objective 5"],
   "literature_survey": [
     {{"paper": "Author et al. (2024) - IEEE Transactions", "summary": "Key finding and research gap addressed."}},
@@ -88,15 +88,15 @@ Return ONLY valid JSON (no markdown fences):
     {{"slide": "Experimental Results", "bullets": ["95.4% operational accuracy in lab trials", "Zero false triggers across 50 test cycles", "Low power consumption & compact footprint"]}},
     {{"slide": "Applications & Future Scope", "bullets": ["Campus, domestic & industrial deployment", "Cloud IoT dashboard & mobile alerts", "Custom PCB fabrication for mass scale"]}}
   ],
-  "working_principle": "Detailed 400-word step-by-step technical working explanation grounded in {subject}.",
+  "working_principle": "Detailed 320-word step-by-step technical working explanation grounded in {subject}.",
   "primary_code_language": "Python 3 / C++",
-  "primary_code": "Complete 85-115 line runnable code.",
+  "primary_code": "Complete 75-95 line runnable code.",
   "has_arduino_hardware": true,
   "arduino_code": "Complete Arduino (.ino) sketch if applicable.",
-  "results_and_discussion": "Detailed 240-word analysis of testing parameters, accuracy, and observations.",
+  "results_and_discussion": "Detailed 200-word analysis of testing parameters, accuracy, and observations.",
   "advantages": ["Advantage 1", "Advantage 2", "Advantage 3", "Advantage 4"],
   "applications": ["Application 1", "Application 2", "Application 3", "Application 4"],
-  "future_scope": "180-word discussion on scalability and future upgrades.",
+  "future_scope": "150-word discussion on scalability and future upgrades.",
   "references": [
     "[1] IEEE Standard Technical Reference (2025).",
     "[2] Standard University Textbook on {subject}, Pearson Education.",
@@ -113,21 +113,22 @@ Return ONLY valid JSON (no markdown fences):
   ]
 }}
 """
-        for model_name in ["gemini-4-hydrogen", "gemini-4-carbon", "gemini-3.8-flash", "gemini-2.5-flash"]:
+        # Fast model with strict 18s timeout so Render NEVER hits 30s gateway timeout
+        for model_name in ["gemini-2.5-flash"]:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
                 payload = {
                     "contents": [{"parts": [{"text": prompt}]}],
                     "generationConfig": {"responseMimeType": "application/json", "temperature": 0.3}
                 }
-                resp = requests.post(url, json=payload, timeout=65)
+                resp = requests.post(url, json=payload, timeout=18)
                 if resp.status_code == 200:
                     res_json = resp.json()
                     raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
                     raw_text = re.sub(r"^```json\s*|\s*```$", "", raw_text, flags=re.MULTILINE)
                     return json.loads(raw_text)
             except Exception as e:
-                print("Background engine step:", e)
+                print("Fast AI fallback triggered:", e)
 
     return _smart_topic_blueprint(topic, branch, subject, level)
 
@@ -163,16 +164,23 @@ def _smart_topic_blueprint(topic, branch, subject, level):
             {"name": "9V DC Battery + 830-Pt Breadboard", "spec": "Solderless Prototyping Setup", "cost_inr": 190}
         ]
         prim_lang = "Python 3 (IC 741 Comparator Threshold Simulator)"
-        prim_code = f"""# Project: {clean_title} | Subject: {subject}
+        prim_code = f"""# ============================================================================
+# Project: {clean_title}
+# Subject: {subject} ({branch})
+# IC 741 Operational Amplifier Open-Loop Comparator Simulation
+# ============================================================================
+
 VCC = 9.0
-V_REF = 4.5
+V_REF = 4.5  # Reference Voltage set via 10k Potentiometer at Pin 2 (-IN)
 
 def ic741_comparator(v_non_inverting):
+    # Pin 6 Output saturates to +Vcc when Pin 3 (+IN) > Pin 2 (-IN)
     v_out = (VCC - 0.8) if v_non_inverting > V_REF else 0.2
     led_state = "ON (TANK FULL)" if v_out > 5.0 else "OFF (BELOW LEVEL)"
-    print(f"Pin3(+IN)={{v_non_inverting:.1f}}V -> Pin6(OUT)={{v_out:.1f}}V | LED: {{led_state}}")
+    print(f"Pin3(+IN)={{v_non_inverting:.1f}}V | Pin2(-IN)={{V_REF}}V -> Pin6(OUT)={{v_out:.1f}}V | LED: {{led_state}}")
 
 if __name__ == "__main__":
+    print("=== {clean_title} — IC 741 Analysis ===")
     for probe_v in [1.2, 3.4, 4.8, 7.5]:
         ic741_comparator(probe_v)
 """
@@ -196,13 +204,31 @@ if __name__ == "__main__":
             {"name": "830-Point Breadboard & Jumpers", "spec": "Solderless Prototyping Board", "cost_inr": 140}
         ]
         prim_lang = "Arduino C++ (.ino) — Automated Irrigation Firmware"
-        prim_code = f"""// Project: {clean_title}
+        prim_code = f"""// ============================================================================
+// Project: {clean_title}
+// Subject: {subject} ({branch})
+// ============================================================================
+
 #define MOISTURE_PIN A0
 #define PUMP_RELAY   7
-void setup() {{ Serial.begin(115200); pinMode(PUMP_RELAY, OUTPUT); }}
+#define DRY_THRESHOLD 620
+
+void setup() {{
+  Serial.begin(115200);
+  pinMode(PUMP_RELAY, OUTPUT);
+  digitalWrite(PUMP_RELAY, HIGH);
+  Serial.println("SMART IRRIGATION SYSTEM INITIALIZED");
+}}
+
 void loop() {{
-  int val = analogRead(MOISTURE_PIN);
-  digitalWrite(PUMP_RELAY, val > 620 ? LOW : HIGH);
+  int moistureVal = analogRead(MOISTURE_PIN);
+  if (moistureVal > DRY_THRESHOLD) {{
+    digitalWrite(PUMP_RELAY, LOW);
+    Serial.println("[DRY SOIL] Water Pump -> ON");
+  }} else {{
+    digitalWrite(PUMP_RELAY, HIGH);
+    Serial.println("[WET SOIL] Water Pump -> OFF");
+  }}
   delay(500);
 }}
 """
@@ -646,7 +672,6 @@ def build_seminar_pptx(blueprint, student_name, usn, college, branch, subject, g
     prs.slide_width = PptInches(13.333)
     prs.slide_height = PptInches(7.5)
 
-    # Slide 1: Cover Slide
     s1 = prs.slides.add_slide(prs.slide_layouts[6])
     bg = s1.shapes.add_shape(1, 0, 0, prs.slide_width, prs.slide_height)
     bg.fill.solid()
@@ -673,7 +698,6 @@ def build_seminar_pptx(blueprint, student_name, usn, college, branch, subject, g
     p2.font.size = PptPt(16)
     p2.font.color.rgb = PptRGB(203, 213, 225)
 
-    # Content Slides
     for idx, slide_data in enumerate(blueprint.get("ppt_slides", []), start=2):
         slide = prs.slides.add_slide(prs.slide_layouts[6])
         header = slide.shapes.add_shape(1, 0, 0, prs.slide_width, PptInches(1.15))
@@ -705,7 +729,7 @@ def build_seminar_pptx(blueprint, student_name, usn, college, branch, subject, g
     return buf
 
 
-# ==================== 3. FRONTEND HTML (DISCIPLINED WHITE STUDIO + PWA INSTALL + PPTX + IEEE) ====================
+# ==================== 3. FRONTEND HTML (ZERO TIMEOUT + KEEP-ALIVE + CLEAN STUDIO) ====================
 HTML_PAGE = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -735,7 +759,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
       position: fixed; inset: 0; z-index: 9999;
       background: #ffffff;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      animation: splashAutoOut 0.35s ease 0.9s forwards;
+      animation: splashAutoOut 0.3s ease 0.7s forwards;
     }
     @keyframes splashAutoOut {
       to { opacity: 0; visibility: hidden; pointer-events: none; }
@@ -762,7 +786,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   <!-- 1. CLEAN WHITE SPLASH SCREEN -->
   <div id="splash-screen">
-    <svg width="76" height="76" viewBox="0 0 88 88" fill="none">
+    <svg width="72" height="72" viewBox="0 0 88 88" fill="none">
       <rect x="4" y="4" width="80" height="80" rx="22" fill="#1e3a8a"/>
       <path d="M26 44H37L42 30L49 58L54 44H63" stroke="#38bdf8" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
       <circle cx="25" cy="44" r="4" fill="#ffffff"/>
@@ -828,17 +852,17 @@ HTML_PAGE = r"""<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- 4. INSTALL APP HELP MODAL (FOR IOS / BROWSERS WITHOUT AUTO PROMPT) -->
+  <!-- 4. INSTALL APP HELP MODAL -->
   <div id="install-help-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
     <div class="card max-w-md w-full rounded-2xl p-6 relative">
       <button type="button" onclick="closeInstallHelp()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 text-sm">✕</button>
       <h2 class="text-base font-bold text-slate-900">📲 Install ProjForge App</h2>
       <p class="text-xs text-slate-600 mt-2 leading-relaxed">
-        To install this app directly onto your phone or laptop home screen:
+        Install this app on your phone or laptop for instant access:
       </p>
       <ul class="text-xs text-slate-700 space-y-2 mt-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-        <li><b>Android Chrome:</b> Tap the <b>⋮ (3 dots)</b> menu at top-right → Tap <b>"Install app"</b> or <b>"Add to Home screen"</b>.</li>
-        <li><b>iPhone Safari:</b> Tap the <b>Share (↑)</b> button → Tap <b>"Add to Home Screen"</b>.</li>
+        <li><b>Android Chrome:</b> Tap <b>⋮ (3 dots)</b> at top-right → Tap <b>"Install app"</b> or <b>"Add to Home screen"</b>.</li>
+        <li><b>iPhone Safari:</b> Tap <b>Share (↑)</b> → Tap <b>"Add to Home Screen"</b>.</li>
         <li><b>Laptop Chrome/Edge:</b> Click the <b>Install icon</b> in the right corner of the address bar.</li>
       </ul>
       <button type="button" onclick="closeInstallHelp()" class="w-full mt-4 py-2.5 rounded-xl bg-blue-900 text-white text-xs font-semibold">Got It</button>
@@ -886,7 +910,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- 6. DISCIPLINED WHITE TOP NAVBAR WITH INSTALL BUTTON -->
+  <!-- 6. DISCIPLINED WHITE TOP NAVBAR -->
   <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
       <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigatePage('page-home')">
@@ -902,7 +926,6 @@ HTML_PAGE = r"""<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Desktop Tabs -->
       <nav class="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
         <button type="button" onclick="navigatePage('page-home')" id="nav-d-home" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-900 text-white">🏠 Create</button>
         <button type="button" onclick="navigatePage('page-3d')" id="nav-d-3d" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900">🧊 Circuit / Flow</button>
@@ -910,7 +933,6 @@ HTML_PAGE = r"""<!DOCTYPE html>
         <button type="button" onclick="navigatePage('page-report')" id="nav-d-report" class="nav-d-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900">📄 Report &amp; PPTX</button>
       </nav>
 
-      <!-- Install Button + Profile Menu -->
       <div class="flex items-center gap-2">
         <button type="button" id="install-app-btn" onclick="triggerInstallApp()"
           class="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 font-bold text-xs flex items-center gap-1.5 transition">
@@ -1170,7 +1192,6 @@ HTML_PAGE = r"""<!DOCTYPE html>
             <h2 id="rep-title" class="text-lg sm:text-xl font-bold text-slate-900 mt-0.5"></h2>
           </div>
 
-          <!-- 3 Direct Download Buttons: VTU DOCX + Seminar PPTX + IEEE Research Paper -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <button type="button" onclick="downloadDocxDirect()" id="download-docx-btn"
               class="py-3 px-4 rounded-xl bg-blue-900 hover:bg-blue-800 font-bold text-white text-xs shadow-sm flex items-center justify-center gap-2">
@@ -1186,7 +1207,6 @@ HTML_PAGE = r"""<!DOCTYPE html>
             </button>
           </div>
 
-          <!-- Report Formatting Tools -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-200">
             <div>
               <label class="text-[11px] font-semibold text-slate-600">Font Style</label>
@@ -1242,7 +1262,6 @@ HTML_PAGE = r"""<!DOCTYPE html>
           </div>
         </div>
 
-        <!-- Indian Engineering Student Submission Checklist -->
         <div class="card rounded-2xl p-5">
           <h3 class="text-sm font-bold text-slate-900 mb-2">✅ College Viva &amp; Lab Submission Checklist</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700">
@@ -1364,7 +1383,6 @@ HTML_PAGE = r"""<!DOCTYPE html>
     let sensorStimulusLevel = 0.65;
     let deferredInstallPrompt = null;
 
-    // Register Service Worker & Capture Install Prompt
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
@@ -1388,6 +1406,11 @@ HTML_PAGE = r"""<!DOCTYPE html>
       m.classList.add("hidden"); m.classList.remove("flex");
     }
 
+    // Keep server awake while user is active
+    setInterval(() => {
+      fetch("/health").catch(() => {});
+    }, 240000);
+
     function dismissSplash() {
       const s = document.getElementById("splash-screen");
       if (s) {
@@ -1404,7 +1427,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
         dismissSplash();
         if (!studentProfile || !studentProfile.email) openLoginModal();
         else updateProfileUI();
-      }, 950);
+      }, 750);
 
       try {
         initThreeJS();
@@ -1576,14 +1599,20 @@ HTML_PAGE = r"""<!DOCTYPE html>
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ topic, branch, subject, level })
         });
-        const data = await res.json();
+        const rawText = await res.text();
+        let data;
+        try {
+          data = JSON.parse(rawText);
+        } catch (_) {
+          throw new Error("Server busy waking up. Please tap Generate Project once more!");
+        }
         if (data.error) throw new Error(data.error);
         currentBlueprint = data.blueprint;
         saveRecentProject(currentBlueprint);
         populateAllPages(currentBlueprint);
         navigatePage("page-3d");
       } catch (err) {
-        alert("Error: " + err.message);
+        alert(err.message);
       } finally {
         btn.disabled = false; btn.innerText = "Generate Project";
       }
@@ -2050,7 +2079,12 @@ HTML_PAGE = r"""<!DOCTYPE html>
 """
 
 
-# ==================== 4. FLASK API ROUTES & PWA SERVICE WORKER ====================
+# ==================== 4. FLASK API ROUTES & HEALTH PING ====================
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"}), 200
+
+
 @app.route("/favicon.ico")
 def favicon():
     svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88">
